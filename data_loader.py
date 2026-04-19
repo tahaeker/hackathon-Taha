@@ -104,27 +104,105 @@ def compute_circuity_factors(stops: pd.DataFrame) -> dict:
 
 
 # ---------------------------------------------------------------------------
-# Coğrafi lookup yardımcıları
+# Dinamik coğrafi + zamansal lookup yardımcıları
 # ---------------------------------------------------------------------------
 
-def get_nearest_weather(lat: float, lon: float, weather_df: pd.DataFrame) -> pd.Series:
-    """Koordinata en yakın hava durumu gözlemini döndürür."""
-    dists = weather_df.apply(
-        lambda r: haversine(lat, lon, float(r["latitude"]), float(r["longitude"])), axis=1
-    )
-    return weather_df.iloc[dists.idxmin()]
-
-
-def get_nearest_traffic(
-    lat: float, lon: float, road_type: str, traffic_df: pd.DataFrame
+def get_weather_at(
+    lat: float,
+    lon: float,
+    timestamp: pd.Timestamp,
+    weather_df: pd.DataFrame,
 ) -> pd.Series:
-    """Koordinata en yakın trafik segmentini döndürür (önce aynı road_type'ta arar)."""
-    mask = traffic_df["road_type"] == road_type
-    subset = traffic_df[mask] if mask.sum() > 0 else traffic_df
-    dists = subset.apply(
-        lambda r: haversine(lat, lon, float(r["center_lat"]), float(r["center_lon"])), axis=1
-    )
-    return subset.iloc[dists.idxmin()]
+    """
+    Belirli bir koordinat VE saate en uygun hava gözlemini döndürür.
+
+    Strateji (kademeli fallback):
+      1. Aynı saat (hour_of_day eşleşmesi) → en yakın koordinat
+      2. ±2 saat aralığı                   → en yakın koordinat
+      3. Tüm gözlemler                      → en yakın koordinat
+
+    Bu sayede kurye bir durağa 2 saat geç varırsa (current_time değişmiş),
+    o saate ait hava koşullarıyla tahmin yapılır.
+    """
+    hour = timestamp.hour
+    hours_of_day = weather_df["timestamp"].dt.hour
+
+    for window in [0, 2, 24]:          # 0 = tam eşleşme, 2 = ±2 saat, 24 = hepsi
+        if window == 24:
+            subset = weather_df
+        else:
+            lo = (hour - window) % 24
+            hi = (hour + window) % 24
+            if lo <= hi:
+                mask = hours_of_day.between(lo, hi)
+            else:                        # gece yarısı geçişi (ör: 23→1)
+                mask = (hours_of_day >= lo) | (hours_of_day <= hi)
+            subset = weather_df[mask]
+
+        if subset.empty:
+            continue
+
+        dists = subset.apply(
+            lambda r: haversine(lat, lon, float(r["latitude"]), float(r["longitude"])),
+            axis=1,
+        )
+        return subset.loc[dists.idxmin()]
+
+    # Bu noktaya ulaşılmamalı; güvenlik ağı
+    return weather_df.iloc[0]
+
+
+def get_traffic_at(
+    lat: float,
+    lon: float,
+    timestamp: pd.Timestamp,
+    road_type: str,
+    traffic_df: pd.DataFrame,
+) -> pd.Series:
+    """
+    Belirli bir koordinat, saat ve yol türüne en uygun trafik segmentini döndürür.
+
+    Strateji (kademeli fallback):
+      1. Aynı hour_of_day + aynı road_type → en yakın koordinat
+      2. Aynı hour_of_day (road_type yok)  → en yakın koordinat
+      3. ±1 saat + aynı road_type          → en yakın koordinat
+      4. ±1 saat (road_type yok)           → en yakın koordinat
+      5. Tüm segmentler                    → en yakın koordinat
+
+    Böylece kurye gece yarısına geç kalırsa gece saatine ait düşük trafik
+    verisi kullanılır; rush-hour'da erken varırsa yoğun trafik yansır.
+    """
+    hour = traffic_df["hour_of_day"]
+    h = timestamp.hour
+
+    candidates = [
+        (traffic_df["hour_of_day"] == h) & (traffic_df["road_type"] == road_type),
+        (traffic_df["hour_of_day"] == h),
+        (traffic_df["hour_of_day"].between(max(0, h - 1), min(23, h + 1))) & (traffic_df["road_type"] == road_type),
+        (traffic_df["hour_of_day"].between(max(0, h - 1), min(23, h + 1))),
+        pd.Series([True] * len(traffic_df), index=traffic_df.index),
+    ]
+
+    for mask in candidates:
+        subset = traffic_df[mask]
+        if subset.empty:
+            continue
+        dists = subset.apply(
+            lambda r: haversine(lat, lon, float(r["center_lat"]), float(r["center_lon"])),
+            axis=1,
+        )
+        return subset.loc[dists.idxmin()]
+
+    return traffic_df.iloc[0]
+
+
+# Eski isimler — geriye dönük uyumluluk için ince sarmalayıcılar
+def get_nearest_weather(lat: float, lon: float, weather_df: pd.DataFrame) -> pd.Series:
+    return get_weather_at(lat, lon, pd.Timestamp.now(), weather_df)
+
+
+def get_nearest_traffic(lat: float, lon: float, road_type: str, traffic_df: pd.DataFrame) -> pd.Series:
+    return get_traffic_at(lat, lon, pd.Timestamp.now(), road_type, traffic_df)
 
 
 # ---------------------------------------------------------------------------

@@ -1,26 +1,38 @@
+"""
+optimizer.py
+============
+Dinamik rota simülasyonu ve optimizasyon.
+
+Her durak hesaplanırken current_time ve durağın lat/lon'u kullanılarak
+o ana ait hava ve trafik verisi çekilir. Bu sayede sıra değişikliğinden
+veya gecikmeden doğan çevresel farklılıklar tahmine yansır.
+
+Akış:
+  1. simulate_route  — mevcut sırayı simüle eder (karşılaştırma bazı)
+  2. optimize_stop_order — greedy nearest-neighbor + time-window urgency
+  3. Her iki fonksiyon da per-stop dinamik lookup kullanır
+"""
+
 import pandas as pd
 import numpy as np
 from datetime import timedelta
-from typing import List, Dict, Any
+from typing import List
 
-from data_loader import haversine
+from data_loader import haversine, get_weather_at, get_traffic_at
 from predictor import DelayPredictor
 
-# Base travel speeds (km/h) per road type under ideal conditions
-BASE_SPEED = {
-    "highway": 90.0,
-    "urban": 45.0,
-    "rural": 65.0,
-    "mountain": 40.0,
-}
+# Yol türüne göre ideal hız (km/h)
+BASE_SPEED = {"highway": 90.0, "urban": 45.0, "rural": 65.0, "mountain": 40.0}
 DEFAULT_SPEED = 55.0
 
 
+# ---------------------------------------------------------------------------
+# Yardımcılar
+# ---------------------------------------------------------------------------
+
 def _travel_minutes(
-    lat1: float,
-    lon1: float,
-    lat2: float,
-    lon2: float,
+    lat1: float, lon1: float,
+    lat2: float, lon2: float,
     road_type: str,
     circuity: dict,
     delay_factor: float,
@@ -29,8 +41,34 @@ def _travel_minutes(
     cf = circuity.get(road_type, 1.4)
     road_km = straight_km * cf
     speed = BASE_SPEED.get(road_type, DEFAULT_SPEED)
-    ideal_min = (road_km / speed) * 60.0
-    return ideal_min * delay_factor
+    return (road_km / speed) * 60.0 * delay_factor
+
+
+def _dynamic_conditions(
+    lat: float,
+    lon: float,
+    road_type: str,
+    current_time: pd.Timestamp,
+    weather_df: pd.DataFrame,
+    traffic_df: pd.DataFrame,
+) -> dict:
+    """
+    Durağın konumuna ve o anki saate bakarak dinamik hava + trafik döndürür.
+    Bu fonksiyon sayesinde 'saat değişince koşullar değişir' mantığı kurulur.
+    """
+    w = get_weather_at(lat, lon, current_time, weather_df)
+    t = get_traffic_at(lat, lon, current_time, road_type, traffic_df)
+
+    return {
+        "weather_condition": str(w["weather_condition"]),
+        "traffic_level": str(t["traffic_level"]),
+        "congestion_ratio": float(t["congestion_ratio"]),
+        "delay_risk_score": float(w["delay_risk_score"]),
+        "road_surface": str(w.get("road_surface_condition", "dry")),
+        "precipitation_mm": float(w["precipitation_mm"]),
+        "visibility_km": float(w["visibility_km"]),
+        "wind_speed_kmh": float(w["wind_speed_kmh"]),
+    }
 
 
 def _stop_result(
@@ -39,6 +77,7 @@ def _stop_result(
     travel_min: float,
     stop_delay_min: float,
     new_sequence: int,
+    dynamic: dict,
 ) -> dict:
     window_open = pd.Timestamp(stop["time_window_open"])
     window_close = pd.Timestamp(stop["time_window_close"])
@@ -59,19 +98,40 @@ def _stop_result(
         "predicted_stop_delay_min": round(stop_delay_min, 1),
         "package_count": int(stop["package_count"]),
         "package_weight_kg": float(stop["package_weight_kg"]),
+        # Dinamik çevresel koşullar — hangi değerlerin kullanıldığını gösterir
+        "dynamic_conditions": {
+            "weather": dynamic["weather_condition"],
+            "traffic": dynamic["traffic_level"],
+            "congestion_ratio": round(dynamic["congestion_ratio"], 3),
+            "delay_risk_score": round(dynamic["delay_risk_score"], 3),
+            "road_surface": dynamic["road_surface"],
+        },
     }
 
+
+# ---------------------------------------------------------------------------
+# Simülasyon (orijinal sıra)
+# ---------------------------------------------------------------------------
 
 def simulate_route(
     stops_df: pd.DataFrame,
     route_info: dict,
     predictor: DelayPredictor,
     hist_df: pd.DataFrame,
-    weather_condition: str,
-    traffic_level: str,
+    weather_df: pd.DataFrame,
+    traffic_df: pd.DataFrame,
     circuity: dict,
+    initial_weather: str,
+    initial_traffic: str,
 ) -> List[dict]:
-    """Simulate the original stop order and predict arrival times."""
+    """
+    Mevcut durak sırasını simüle eder.
+
+    Her durak için:
+      1. current_time ve durağın (lat, lon) kullanılarak dinamik hava+trafik çekilir.
+      2. Dinamik traffic_level ile historical_delay_stats'tan stop gecikme alınır.
+      3. Dinamik congestion_ratio ile seyahat süresi düzeltilir.
+    """
     results = []
     delay_factor = float(route_info.get("predicted_delay_factor", 1.0))
     current_time = pd.Timestamp(route_info["departure_planned"])
@@ -80,51 +140,67 @@ def simulate_route(
     prev_lon = float(stops_df.iloc[0]["longitude"])
 
     for idx, (_, stop) in enumerate(stops_df.iterrows()):
-        lat, lon = float(stop["latitude"]), float(stop["longitude"])
+        lat = float(stop["latitude"])
+        lon = float(stop["longitude"])
         road_type = str(stop["road_type"])
 
+        # --- Dinamik koşulları çek ---
+        dynamic = _dynamic_conditions(lat, lon, road_type, current_time, weather_df, traffic_df)
+
+        # Congestion ratio seyahat süresini etkiler:
+        # congestion 0.0 → normal hız, 1.0 → tam tıkanıklık
+        congestion_penalty = 1.0 + dynamic["congestion_ratio"]
+
         if idx == 0:
-            travel_min = float(stop["planned_travel_min"]) * delay_factor
+            travel_min = float(stop["planned_travel_min"]) * delay_factor * congestion_penalty
         else:
-            travel_min = _travel_minutes(
-                prev_lat, prev_lon, lat, lon, road_type, circuity, delay_factor
-            )
+            base_travel = _travel_minutes(prev_lat, prev_lon, lat, lon, road_type, circuity, delay_factor)
+            travel_min = base_travel * congestion_penalty
 
         current_time += timedelta(minutes=travel_min)
 
+        # --- Dinamik hava+trafik ile stop gecikme tahmini ---
         stop_delay = predictor.predict_stop_delay(
             road_type=road_type,
-            traffic_level=traffic_level,
-            weather_condition=weather_condition,
+            traffic_level=dynamic["traffic_level"],
+            weather_condition=dynamic["weather_condition"],
             hour=current_time.hour,
             hist_df=hist_df,
         )
 
-        results.append(_stop_result(stop, current_time, travel_min, stop_delay, idx + 1))
+        results.append(_stop_result(stop, current_time, travel_min, stop_delay, idx + 1, dynamic))
         current_time += timedelta(minutes=float(stop["planned_service_min"]))
         prev_lat, prev_lon = lat, lon
 
     return results
 
 
+# ---------------------------------------------------------------------------
+# Optimizasyon (greedy nearest-neighbor + time-window urgency)
+# ---------------------------------------------------------------------------
+
 def optimize_stop_order(
     stops_df: pd.DataFrame,
     route_info: dict,
     predictor: DelayPredictor,
     hist_df: pd.DataFrame,
-    weather_condition: str,
-    traffic_level: str,
+    weather_df: pd.DataFrame,
+    traffic_df: pd.DataFrame,
     circuity: dict,
+    initial_weather: str,
+    initial_traffic: str,
 ) -> List[dict]:
     """
-    Greedy nearest-neighbor optimizer with time-window urgency scoring.
-    Prioritizes stops whose time window closes soonest when two candidates
-    are equidistant, heavily penalizes stops that are already unreachable.
+    Greedy nearest-neighbor optimizasyon.
+
+    Her adım kandidatları puanlarken o kandidatın konumuna ve ETA'sına
+    göre dinamik koşullar çekilir. Böylece tıkanık bir bölgeyi gece
+    geçmek ile rush-hour'da geçmek farklı skorlanır.
+
+    Skor = seyahat_süresi × congestion_penalty + pencere_cezası - aciliyet_bonusu
     """
     delay_factor = float(route_info.get("predicted_delay_factor", 1.0))
     current_time = pd.Timestamp(route_info["departure_planned"])
-
-    # Start from depot — use first stop's coords as proxy
     cur_lat = float(stops_df.iloc[0]["latitude"])
     cur_lon = float(stops_df.iloc[0]["longitude"])
 
@@ -134,50 +210,63 @@ def optimize_stop_order(
     while not remaining.empty:
         best_score = float("inf")
         best_idx = 0
+        best_dynamic = {}
+        best_travel = 0.0
 
         for i, row in remaining.iterrows():
-            lat, lon = float(row["latitude"]), float(row["longitude"])
+            lat = float(row["latitude"])
+            lon = float(row["longitude"])
             road_type = str(row["road_type"])
-            travel = _travel_minutes(cur_lat, cur_lon, lat, lon, road_type, circuity, delay_factor)
-            eta = current_time + timedelta(minutes=travel)
+
+            # Tahmini varış saatini hesapla (skor için ön-hesap)
+            base_travel = _travel_minutes(cur_lat, cur_lon, lat, lon, road_type, circuity, delay_factor)
+
+            # Dinamik koşulları tahmini ETA saatinde çek
+            eta = current_time + timedelta(minutes=base_travel)
+            dyn = _dynamic_conditions(lat, lon, road_type, eta, weather_df, traffic_df)
+
+            congestion_penalty = 1.0 + dyn["congestion_ratio"]
+            travel = base_travel * congestion_penalty
 
             window_close = pd.Timestamp(row["time_window_close"])
-            window_open = pd.Timestamp(row["time_window_open"])
-
-            # Penalty: can we arrive before window closes?
             minutes_until_close = (window_close - current_time).total_seconds() / 60.0
+
             if minutes_until_close < travel:
-                # Already missed — penalise proportionally to how late
-                lateness = travel - minutes_until_close
-                penalty = 1000.0 + lateness * 2.0
+                # Pencere kaçacak — geç kalma miktarıyla orantılı ceza
+                penalty = 1000.0 + (travel - minutes_until_close) * 2.0
             else:
                 penalty = 0.0
 
-            # Urgency bonus: prioritise stops closing soon
+            # Penceresi en yakın kapanan durak öncelikli
             urgency_bonus = max(0.0, 500.0 - minutes_until_close) * 0.1
 
             score = travel + penalty - urgency_bonus
             if score < best_score:
                 best_score = score
                 best_idx = i
+                best_dynamic = dyn
+                best_travel = travel
 
         chosen = remaining.loc[best_idx]
-        lat, lon = float(chosen["latitude"]), float(chosen["longitude"])
+        lat = float(chosen["latitude"])
+        lon = float(chosen["longitude"])
         road_type = str(chosen["road_type"])
-        travel_min = _travel_minutes(cur_lat, cur_lon, lat, lon, road_type, circuity, delay_factor)
 
-        current_time += timedelta(minutes=travel_min)
+        current_time += timedelta(minutes=best_travel)
+
+        # Varışta bir kez daha dinamik koşul çek (gerçek varış saatinde)
+        final_dynamic = _dynamic_conditions(lat, lon, road_type, current_time, weather_df, traffic_df)
 
         stop_delay = predictor.predict_stop_delay(
             road_type=road_type,
-            traffic_level=traffic_level,
-            weather_condition=weather_condition,
+            traffic_level=final_dynamic["traffic_level"],
+            weather_condition=final_dynamic["weather_condition"],
             hour=current_time.hour,
             hist_df=hist_df,
         )
 
         visited.append(
-            _stop_result(chosen, current_time, travel_min, stop_delay, len(visited) + 1)
+            _stop_result(chosen, current_time, best_travel, stop_delay, len(visited) + 1, final_dynamic)
         )
         current_time += timedelta(minutes=float(chosen["planned_service_min"]))
         cur_lat, cur_lon = lat, lon
@@ -186,15 +275,19 @@ def optimize_stop_order(
     return visited
 
 
+# ---------------------------------------------------------------------------
+# Metrik hesaplama
+# ---------------------------------------------------------------------------
+
 def compute_metrics(stops_results: List[dict]) -> dict:
     total = len(stops_results)
     if total == 0:
-        return {"total_stops": 0, "on_time_stops": 0, "on_time_rate": 0.0,
-                "total_predicted_delay_min": 0.0, "avg_delay_per_stop_min": 0.0}
-
+        return {
+            "total_stops": 0, "on_time_stops": 0, "on_time_rate": 0.0,
+            "total_predicted_delay_min": 0.0, "avg_delay_per_stop_min": 0.0,
+        }
     on_time = sum(1 for s in stops_results if s["within_time_window"])
     total_delay = sum(s["predicted_stop_delay_min"] for s in stops_results)
-
     return {
         "total_stops": total,
         "on_time_stops": on_time,

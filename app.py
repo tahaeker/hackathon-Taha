@@ -175,13 +175,15 @@ def optimize_route(route_id: str, req: OptimizeRequest):
 
     original_stops = simulate_route(
         stops_df, route_info, state["predictor"], state["hist"],
-        weather, traffic, state["circuity"],
+        state["weather"], state["traffic"], state["circuity"],
+        initial_weather=weather, initial_traffic=traffic,
     )
     original_metrics = compute_metrics(original_stops)
 
     optimized_stops = optimize_stop_order(
         stops_df, route_info, state["predictor"], state["hist"],
-        weather, traffic, state["circuity"],
+        state["weather"], state["traffic"], state["circuity"],
+        initial_weather=weather, initial_traffic=traffic,
     )
     optimized_metrics = compute_metrics(optimized_stops)
 
