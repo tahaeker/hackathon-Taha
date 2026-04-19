@@ -11,7 +11,8 @@
       "Bash(curl -s \"http://localhost:8000/stats/model\")",
       "Bash(python -m uvicorn app:app --port 8000)",
       "Bash(python -c \" import sys, json d = json.load\\(sys.stdin\\) print\\('RF gecikme tahmini:', d['rf_predicted_total_delay_min'], 'dk'\\) print\\('Orijinal:', d['original_order']['metrics']\\) print\\('Optimize:', d['optimized_order']['metrics']\\) print\\('Iyilesme:', d['improvement']\\) print\\(\\) print\\('-- Orijinal durak-1 dinamik koşul:'\\) print\\(json.dumps\\(d['original_order']['stops'][0]['dynamic_conditions'], indent=2\\)\\) print\\('-- Optimize durak-1 dinamik koşul:'\\) print\\(json.dumps\\(d['optimized_order']['stops'][0]['dynamic_conditions'], indent=2\\)\\) \")",
-      "Bash(taskkill //F //IM python.exe)"
+      "Bash(taskkill //F //IM python.exe)",
+      "WebFetch(domain:api.anthropic.com)"
     ]
   }
 }
