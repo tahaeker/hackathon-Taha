@@ -1,0 +1,305 @@
+"""
+data_loader.py
+==============
+Veri yükleme, birleştirme ve AI eğitimi için feature matrisi oluşturma.
+
+Veri ilişkileri:
+  routes (1) ──── (N) route_stops       [route_id üzerinden]
+  routes              traffic_segments  [coğrafi yakınlık — Haversine]
+  routes              weather_observations [coğrafi yakınlık — Haversine]
+  route_stops         historical_delay_stats [road_type × traffic × weather × time_bucket]
+
+Gecikme mekanizması:
+  overall_delay_factor = f(traffic_level, incident_severity, weather_condition)
+  Stop seviyesi gecikme = planned_travel_min × delay_factor + service delay
+"""
+
+import pandas as pd
+import numpy as np
+from math import radians, cos, sin, asin, sqrt
+from pathlib import Path
+
+DATA_DIR = Path(__file__).parent / "data"
+
+# ---------------------------------------------------------------------------
+# Temel coğrafi yardımcı
+# ---------------------------------------------------------------------------
+
+def haversine(lat1: float, lon1: float, lat2: float, lon2: float) -> float:
+    """İki koordinat arasındaki kuş uçuşu mesafe (km)."""
+    R = 6371.0
+    lat1, lon1, lat2, lon2 = map(radians, [lat1, lon1, lat2, lon2])
+    dlat, dlon = lat2 - lat1, lon2 - lon1
+    a = sin(dlat / 2) ** 2 + cos(lat1) * cos(lat2) * sin(dlon / 2) ** 2
+    return 2 * R * asin(sqrt(max(0.0, a)))
+
+
+# ---------------------------------------------------------------------------
+# Ham veri yükleme
+# ---------------------------------------------------------------------------
+
+def load_all() -> tuple:
+    """
+    Tüm 5 CSV dosyasını yükler.
+    Döndürür: (routes, stops, traffic, weather, hist)
+    """
+    routes = pd.read_csv(
+        DATA_DIR / "routes.csv",
+        parse_dates=["departure_planned", "departure_actual"],
+    )
+    stops = pd.read_csv(
+        DATA_DIR / "route_stops.csv",
+        parse_dates=[
+            "planned_arrival", "actual_arrival",
+            "time_window_open", "time_window_close",
+        ],
+    )
+    traffic = pd.read_csv(DATA_DIR / "traffic_segments.csv", parse_dates=["timestamp"])
+    weather = pd.read_csv(DATA_DIR / "weather_observations.csv", parse_dates=["timestamp"])
+    hist = pd.read_csv(DATA_DIR / "historical_delay_stats.csv")
+    return routes, stops, traffic, weather, hist
+
+
+# ---------------------------------------------------------------------------
+# Internal Circuity Factor
+# ---------------------------------------------------------------------------
+
+def compute_circuity_factors(stops: pd.DataFrame) -> dict:
+    """
+    Her road_type için Internal Circuity Factor hesaplar:
+        CF = road_distance_km / haversine_km
+
+    Veri setindeki bilinen durak çiftlerinden türetilir — dışarıdan veri kullanılmaz.
+    Bilinmeyen yollar (örn. A→C verisi yokken) için CF ile tahmin edilebilir:
+        road_km ≈ haversine(A, C) × CF[road_type]
+    """
+    buckets: dict = {}
+    sorted_stops = stops.sort_values(["route_id", "stop_sequence"])
+
+    for _, group in sorted_stops.groupby("route_id"):
+        rows = group.reset_index(drop=True)
+        for i in range(1, len(rows)):
+            prev, curr = rows.iloc[i - 1], rows.iloc[i]
+            road_dist = float(curr["distance_from_prev_km"])
+            straight = haversine(
+                float(prev["latitude"]), float(prev["longitude"]),
+                float(curr["latitude"]), float(curr["longitude"]),
+            )
+            if straight < 0.5:
+                continue
+            ratio = road_dist / straight
+            if not (0.5 <= ratio <= 8.0):
+                continue
+            buckets.setdefault(str(curr["road_type"]), []).append(ratio)
+
+    result = {}
+    for rt, vals in buckets.items():
+        result[rt] = float(np.median(vals))
+
+    # Varsayılan değerler — veri setinde görülmemiş road_type için
+    defaults = {"highway": 1.10, "urban": 1.35, "rural": 1.45, "mountain": 1.65}
+    for rt, default in defaults.items():
+        result.setdefault(rt, default)
+    return result
+
+
+# ---------------------------------------------------------------------------
+# Coğrafi lookup yardımcıları
+# ---------------------------------------------------------------------------
+
+def get_nearest_weather(lat: float, lon: float, weather_df: pd.DataFrame) -> pd.Series:
+    """Koordinata en yakın hava durumu gözlemini döndürür."""
+    dists = weather_df.apply(
+        lambda r: haversine(lat, lon, float(r["latitude"]), float(r["longitude"])), axis=1
+    )
+    return weather_df.iloc[dists.idxmin()]
+
+
+def get_nearest_traffic(
+    lat: float, lon: float, road_type: str, traffic_df: pd.DataFrame
+) -> pd.Series:
+    """Koordinata en yakın trafik segmentini döndürür (önce aynı road_type'ta arar)."""
+    mask = traffic_df["road_type"] == road_type
+    subset = traffic_df[mask] if mask.sum() > 0 else traffic_df
+    dists = subset.apply(
+        lambda r: haversine(lat, lon, float(r["center_lat"]), float(r["center_lon"])), axis=1
+    )
+    return subset.iloc[dists.idxmin()]
+
+
+# ---------------------------------------------------------------------------
+# Stop-seviyesi özellik agregasyonu (rota başına)
+# ---------------------------------------------------------------------------
+
+def _aggregate_stops(stops: pd.DataFrame) -> pd.DataFrame:
+    """
+    route_stops tablosundan rota başına özet istatistikler üretir.
+    Bu değerler, rota seviyesi modelin zenginleştirilmesinde kullanılır.
+    """
+    agg = (
+        stops.groupby("route_id")
+        .agg(
+            avg_delay_probability=("delay_probability", "mean"),
+            max_delay_probability=("delay_probability", "max"),
+            missed_window_count=("missed_time_window", "sum"),
+            total_packages=("package_count", "sum"),
+            total_weight_kg=("package_weight_kg", "sum"),
+            pct_mountain=("road_type", lambda x: (x == "mountain").mean()),
+            pct_highway=("road_type", lambda x: (x == "highway").mean()),
+            pct_urban=("road_type", lambda x: (x == "urban").mean()),
+            pct_rural=("road_type", lambda x: (x == "rural").mean()),
+            mean_actual_travel=("actual_travel_min", "mean"),
+            mean_planned_travel=("planned_travel_min", "mean"),
+        )
+        .reset_index()
+    )
+    # Durak bazında gerçek/planlanan seyahat oranı (1.0 = tam zamanında)
+    agg["stop_travel_ratio"] = (
+        agg["mean_actual_travel"] / agg["mean_planned_travel"].replace(0, np.nan)
+    ).fillna(1.0)
+    return agg
+
+
+# ---------------------------------------------------------------------------
+# AI eğitimine hazır birleşik feature matrisi
+# ---------------------------------------------------------------------------
+
+def build_training_features(
+    routes: pd.DataFrame,
+    stops: pd.DataFrame,
+    traffic: pd.DataFrame,
+    weather: pd.DataFrame,
+) -> pd.DataFrame:
+    """
+    Rota + durak + trafik + hava verilerini birleştirerek
+    Random Forest eğitimine hazır, tek bir DataFrame döndürür.
+
+    Özellik kaynakları:
+      - routes.csv        : hava, trafik, araç, planlama bilgileri
+      - route_stops.csv   : road_type dağılımı, gecikme olasılığı ortalaması
+      - traffic_segments  : rota merkezine en yakın trafik segmentinin congestion_ratio
+      - weather_observations: rota merkezine en yakın istasyonun delay_risk_score
+
+    Hedef değişken: total_delay_min (negatif değerler 0 ile klipslenmiş)
+    """
+    df = routes.copy()
+
+    # --- Zaman özellikleri ---
+    dep = pd.to_datetime(df["departure_planned"])
+    df["hour"] = dep.dt.hour
+    df["day_of_week"] = dep.dt.dayofweek
+    df["month"] = dep.dt.month
+    df["is_rush_hour"] = df["hour"].apply(lambda h: 1 if h in range(7, 10) or h in range(17, 20) else 0)
+    df["is_night"] = df["hour"].apply(lambda h: 1 if h >= 22 or h <= 5 else 0)
+
+    # --- Kategorik encoding (ordinal, ML için anlamlı sıra) ---
+    weather_order = ["clear", "cloudy", "fog", "wind", "rain", "snow"]
+    traffic_order = ["low", "moderate", "high", "congested"]
+    vehicle_order = ["motorcycle", "car", "van", "truck"]
+
+    def safe_ordinal(series: pd.Series, order: list) -> pd.Series:
+        mapping = {v: i for i, v in enumerate(order)}
+        return series.map(mapping).fillna(len(order) // 2).astype(int)
+
+    df["weather_enc"] = safe_ordinal(df["weather_condition"], weather_order)
+    df["traffic_enc"] = safe_ordinal(df["traffic_level"], traffic_order)
+    df["vehicle_enc"] = safe_ordinal(df["vehicle_type"], vehicle_order)
+
+    # --- Bileşik hava riski skoru ---
+    # precipitation + düşük visibility + yüksek rüzgar → yüksek risk
+    df["weather_risk"] = (
+        df["precipitation_mm"].clip(0, 20) / 20.0 * 0.4
+        + (1.0 - df["visibility_km"].clip(0, 30) / 30.0) * 0.3
+        + df["wind_speed_kmh"].clip(0, 60) / 60.0 * 0.3
+    )
+
+    # --- Rota merkezini hesapla (en yakın hava/trafik araması için) ---
+    stop_centers = (
+        stops.groupby("route_id")[["latitude", "longitude"]]
+        .mean()
+        .rename(columns={"latitude": "center_lat", "longitude": "center_lon"})
+        .reset_index()
+    )
+    df = df.merge(stop_centers, on="route_id", how="left")
+
+    # --- En yakın trafik segmentinin congestion_ratio ---
+    def nearest_congestion(row):
+        if pd.isna(row.get("center_lat")):
+            return 0.2
+        dists = traffic.apply(
+            lambda t: haversine(
+                float(row["center_lat"]), float(row["center_lon"]),
+                float(t["center_lat"]), float(t["center_lon"]),
+            ),
+            axis=1,
+        )
+        return float(traffic.iloc[dists.idxmin()]["congestion_ratio"])
+
+    df["nearest_congestion_ratio"] = df.apply(nearest_congestion, axis=1)
+
+    # --- En yakın hava istasyonunun delay_risk_score ---
+    def nearest_weather_risk(row):
+        if pd.isna(row.get("center_lat")):
+            return 0.3
+        dists = weather.apply(
+            lambda w: haversine(
+                float(row["center_lat"]), float(row["center_lon"]),
+                float(w["latitude"]), float(w["longitude"]),
+            ),
+            axis=1,
+        )
+        return float(weather.iloc[dists.idxmin()]["delay_risk_score"])
+
+    df["nearest_weather_risk"] = df.apply(nearest_weather_risk, axis=1)
+
+    # --- Durak özeti (routes ile birleştir) ---
+    stop_agg = _aggregate_stops(stops)
+    df = df.merge(stop_agg, on="route_id", how="left")
+
+    # --- Hedef değişken ---
+    df["target_delay_min"] = df["total_delay_min"].clip(lower=0)
+
+    # --- Son feature listesi ---
+    feature_cols = [
+        "route_id",
+        # Hava
+        "weather_enc", "temperature_c", "precipitation_mm",
+        "wind_speed_kmh", "humidity_pct", "visibility_km", "weather_risk",
+        # Trafik
+        "traffic_enc", "nearest_congestion_ratio",
+        # Kaza
+        "road_incident", "incident_severity",
+        # Araç / rota
+        "vehicle_enc", "num_stops", "total_distance_km",
+        # Zaman
+        "hour", "day_of_week", "month", "is_rush_hour", "is_night",
+        # Durak istatistikleri (route_stops → aggregate)
+        "avg_delay_probability", "max_delay_probability",
+        "pct_mountain", "pct_highway", "pct_urban", "pct_rural",
+        "stop_travel_ratio", "total_packages", "total_weight_kg",
+        # Hava istasyonu riski
+        "nearest_weather_risk",
+        # Hedef
+        "target_delay_min",
+    ]
+
+    available = [c for c in feature_cols if c in df.columns]
+    return df[available].reset_index(drop=True)
+
+
+# ---------------------------------------------------------------------------
+# Model feature sütunları (route_id ve target hariç)
+# ---------------------------------------------------------------------------
+
+MODEL_FEATURE_COLS = [
+    "weather_enc", "temperature_c", "precipitation_mm",
+    "wind_speed_kmh", "humidity_pct", "visibility_km", "weather_risk",
+    "traffic_enc", "nearest_congestion_ratio",
+    "road_incident", "incident_severity",
+    "vehicle_enc", "num_stops", "total_distance_km",
+    "hour", "day_of_week", "month", "is_rush_hour", "is_night",
+    "avg_delay_probability", "max_delay_probability",
+    "pct_mountain", "pct_highway", "pct_urban", "pct_rural",
+    "stop_travel_ratio", "total_packages", "total_weight_kg",
+    "nearest_weather_risk",
+]

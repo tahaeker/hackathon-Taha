@@ -1,0 +1,14 @@
+{
+  "permissions": {
+    "allow": [
+      "Bash(pip install *)",
+      "Bash(python -c ' *)",
+      "Bash(python -m uvicorn app:app --port 8000 --host 0.0.0.0)",
+      "Bash(curl -s http://localhost:8000/health)",
+      "Bash(python -m json.tool)",
+      "Bash(curl -s \"http://localhost:8000/optimize/RT-0004\" -X POST -H \"Content-Type: application/json\" -d '{\"weather_condition\":\"rain\",\"traffic_level\":\"high\"}')",
+      "Bash(curl -s \"http://localhost:8000/optimize/RT-0109\" -X POST -H \"Content-Type: application/json\" -d '{\"weather_condition\":\"rain\",\"traffic_level\":\"high\"}')",
+      "Bash(curl -s \"http://localhost:8000/stats/model\")"
+    ]
+  }
+}
