@@ -3,7 +3,12 @@ from typing import Optional
 
 import pandas as pd
 from fastapi import FastAPI, HTTPException, Query
+from fastapi.responses import HTMLResponse, FileResponse
+from fastapi.staticfiles import StaticFiles
+from fastapi.middleware.cors import CORSMiddleware
 from pydantic import BaseModel
+
+from pathlib import Path
 
 from data_loader import load_all, compute_circuity_factors
 from predictor import DelayPredictor
@@ -48,6 +53,31 @@ app = FastAPI(
     version="1.0.0",
     lifespan=lifespan,
 )
+
+# ---------------------------------------------------------------------------
+# CORS — frontend'in API'ye istek atabilmesi için
+# ---------------------------------------------------------------------------
+app.add_middleware(
+    CORSMiddleware,
+    allow_origins=["*"],
+    allow_credentials=True,
+    allow_methods=["*"],
+    allow_headers=["*"],
+)
+
+# ---------------------------------------------------------------------------
+# Static + Root
+# ---------------------------------------------------------------------------
+STATIC_DIR = Path(__file__).parent / "static"
+INDEX_FILE = STATIC_DIR / "index.html"
+
+app.mount("/static", StaticFiles(directory=str(STATIC_DIR)), name="static")
+
+
+@app.get("/", response_class=HTMLResponse, tags=["Meta"])
+def root():
+    """Komuta Merkezi — ana arayüz."""
+    return FileResponse(str(INDEX_FILE), media_type="text/html")
 
 
 # ---------------------------------------------------------------------------

@@ -7,20 +7,21 @@
 <link rel="preconnect" href="https://fonts.googleapis.com">
 <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
 <link href="https://fonts.googleapis.com/css2?family=Inter+Tight:wght@400;500;600;700&family=JetBrains+Mono:wght@400;500;600&display=swap" rel="stylesheet">
+<link rel="stylesheet" href="https://unpkg.com/leaflet@1.9.4/dist/leaflet.css"/>
 <style>
 :root {
-  --bg-0: #070b11;
-  --bg-1: #0c1219;
-  --bg-2: #111924;
-  --bg-3: #172230;
-  --bg-4: #1f2c3d;
-  --line-soft: rgba(148, 178, 214, 0.08);
-  --line: rgba(148, 178, 214, 0.14);
-  --line-strong: rgba(148, 178, 214, 0.26);
+  --bg-0: #0B1120;
+  --bg-1: #0e1628;
+  --bg-2: #131e30;
+  --bg-3: #192638;
+  --bg-4: #1f2f44;
+  --line-soft: rgba(148, 178, 214, 0.07);
+  --line: rgba(148, 178, 214, 0.13);
+  --line-strong: rgba(148, 178, 214, 0.24);
   --text-0: #e8f0fa;
   --text-1: #b8c7d9;
   --text-2: #7d8ea3;
-  --text-3: #556479;
+  --text-3: #506179;
   --cyan: #5dd6e6;
   --cyan-soft: rgba(93, 214, 230, 0.12);
   --cyan-glow: rgba(93, 214, 230, 0.35);
@@ -38,7 +39,7 @@
   --space-1: 4px; --space-2: 8px; --space-3: 12px; --space-4: 16px;
   --space-5: 20px; --space-6: 24px; --space-8: 32px;
   --radius-sm: 4px; --radius-md: 6px; --radius-lg: 10px;
-  --shadow-panel: 0 1px 0 rgba(255,255,255,0.02) inset, 0 24px 48px -24px rgba(0,0,0,0.6);
+  --shadow-panel: 0 1px 0 rgba(255,255,255,0.02) inset, 0 24px 48px -24px rgba(0,0,0,0.7);
 }
 * { box-sizing: border-box; }
 html, body { margin: 0; padding: 0; background: var(--bg-0); color: var(--text-1);
@@ -51,15 +52,19 @@ html, body { margin: 0; padding: 0; background: var(--bg-0); color: var(--text-1
 button { font-family: inherit; color: inherit; background: none; border: 0; cursor: pointer; padding: 0; }
 button:focus-visible { outline: 1px solid var(--cyan); outline-offset: 2px; }
 .app { display: grid; grid-template-rows: 52px 1fr 36px; height: 100vh; overflow: hidden;
-  background: radial-gradient(ellipse 80% 60% at 50% 0%, rgba(93,214,230,0.04), transparent 60%), var(--bg-0); }
+  background: radial-gradient(ellipse 80% 60% at 50% 0%, rgba(93,214,230,0.03), transparent 60%),
+    radial-gradient(ellipse 40% 30% at 20% 100%, rgba(93,214,230,0.02), transparent 50%),
+    var(--bg-0); }
+
+/* ── TOPBAR ── */
 .topbar { display: flex; align-items: center; gap: var(--space-5); padding: 0 var(--space-5);
-  border-bottom: 1px solid var(--line); background: var(--bg-1); }
+  border-bottom: 1px solid var(--line); background: rgba(14,22,40,0.96); backdrop-filter: blur(10px); }
 .topbar .brand { display: flex; align-items: center; gap: var(--space-3); font-weight: 600; color: var(--text-0); font-size: var(--fs-md); }
 .topbar .brand .mark { width: 22px; height: 22px; border-radius: 5px;
-  background: linear-gradient(135deg, var(--cyan) 0%, #2a7b8a 100%); position: relative;
-  box-shadow: 0 0 0 1px rgba(93,214,230,0.3), 0 0 12px var(--cyan-glow); }
+  background: linear-gradient(135deg, var(--cyan) 0%, #1e6b7a 100%); position: relative;
+  box-shadow: 0 0 0 1px rgba(93,214,230,0.3), 0 0 14px var(--cyan-glow); }
 .topbar .brand .mark::after { content: ''; position: absolute; inset: 5px;
-  border: 1.5px solid var(--bg-1); border-radius: 2px; border-right-color: transparent; border-bottom-color: transparent; }
+  border: 1.5px solid rgba(11,17,32,0.7); border-radius: 2px; border-right-color: transparent; border-bottom-color: transparent; }
 .topbar .brand .sub { color: var(--text-2); font-weight: 400; margin-left: var(--space-2); }
 .topbar nav { display: flex; gap: 2px; margin-left: var(--space-6); }
 .topbar nav button { padding: 6px 12px; border-radius: var(--radius-sm); color: var(--text-2); font-size: var(--fs-md); font-weight: 500; transition: all 0.12s; }
@@ -74,17 +79,20 @@ button:focus-visible { outline: 1px solid var(--cyan); outline-offset: 2px; }
 .topbar .chip.critical .dot { background: var(--red); box-shadow: 0 0 6px var(--red); animation: pulse 1.6s infinite; }
 .topbar .chip.info .dot { background: var(--cyan); box-shadow: 0 0 6px var(--cyan); }
 @keyframes pulse { 0%, 100% { opacity: 1 } 50% { opacity: 0.35 } }
+@keyframes fadeIn { from { opacity: 0; transform: translateY(-6px); } to { opacity: 1; transform: translateY(0); } }
 .topbar .clock { font-family: var(--font-mono); color: var(--text-0); font-size: var(--fs-md); }
 .topbar .clock .tz { color: var(--text-3); margin-left: 6px; font-size: var(--fs-sm); }
+
+/* ── LAYOUT ── */
 .main { display: grid; grid-template-columns: 340px 1fr 400px; gap: 1px; background: var(--line); overflow: hidden; }
 .main.wide-map { grid-template-columns: 300px 1fr 380px; }
-.pane { background: linear-gradient(180deg, rgba(23,34,48,0.55), rgba(12,18,25,0.85));
-  backdrop-filter: blur(18px) saturate(1.1); -webkit-backdrop-filter: blur(18px) saturate(1.1);
+.pane { background: linear-gradient(180deg, rgba(25,38,56,0.5), rgba(14,22,40,0.88));
+  backdrop-filter: blur(18px) saturate(1.15); -webkit-backdrop-filter: blur(18px) saturate(1.15);
   overflow: hidden; display: flex; flex-direction: column; min-height: 0;
-  box-shadow: inset 0 1px 0 rgba(255,255,255,0.04), inset -1px 0 0 rgba(255,255,255,0.02); }
-.glass { background: rgba(23,34,48,0.45); backdrop-filter: blur(14px) saturate(1.2);
-  -webkit-backdrop-filter: blur(14px) saturate(1.2); border: 1px solid rgba(148,178,214,0.12);
-  border-radius: var(--radius-md); box-shadow: 0 1px 0 rgba(255,255,255,0.05) inset, 0 10px 30px -12px rgba(0,0,0,0.6); }
+  box-shadow: inset 0 1px 0 rgba(255,255,255,0.03), inset -1px 0 0 rgba(255,255,255,0.02); }
+.glass { background: rgba(25,38,56,0.5); backdrop-filter: blur(14px) saturate(1.2);
+  -webkit-backdrop-filter: blur(14px) saturate(1.2); border: 1px solid rgba(148,178,214,0.11);
+  border-radius: var(--radius-md); box-shadow: 0 1px 0 rgba(255,255,255,0.04) inset, 0 10px 30px -12px rgba(0,0,0,0.7); }
 .pane-header { display: flex; align-items: center; justify-content: space-between;
   padding: 10px var(--space-4); border-bottom: 1px solid var(--line); flex-shrink: 0; }
 .pane-header h3 { margin: 0; font-size: var(--fs-md); color: var(--text-0); font-weight: 600; letter-spacing: -0.01em; }
@@ -95,11 +103,13 @@ button:focus-visible { outline: 1px solid var(--cyan); outline-offset: 2px; }
 .pane-body::-webkit-scrollbar-thumb { background: var(--bg-3); border-radius: 4px; }
 .pane-body::-webkit-scrollbar-thumb:hover { background: var(--bg-4); }
 .footer { display: flex; align-items: center; gap: var(--space-5); padding: 0 var(--space-4);
-  border-top: 1px solid var(--line); background: var(--bg-1); font-size: var(--fs-sm); color: var(--text-2); }
+  border-top: 1px solid var(--line); background: rgba(14,22,40,0.96); font-size: var(--fs-sm); color: var(--text-2); }
 .footer .k { color: var(--text-3); margin-right: 6px; }
 .footer .v { color: var(--text-1); font-family: var(--font-mono); }
 .footer .sep { width: 1px; height: 14px; background: var(--line); }
 .footer .right { margin-left: auto; display: flex; gap: var(--space-5); align-items: center; }
+
+/* ── BADGES ── */
 .badge { display: inline-flex; align-items: center; gap: 4px; padding: 2px 7px; border-radius: 3px;
   font-size: var(--fs-xs); font-weight: 600; text-transform: uppercase; letter-spacing: 0.06em; font-family: var(--font-mono); }
 .badge.critical { background: var(--red-soft); color: var(--red); }
@@ -109,11 +119,13 @@ button:focus-visible { outline: 1px solid var(--cyan); outline-offset: 2px; }
 .badge.muted { background: var(--bg-3); color: var(--text-2); }
 .divider { height: 1px; background: var(--line); margin: var(--space-4) 0; }
 .divider-soft { height: 1px; background: var(--line-soft); margin: var(--space-3) 0; }
+
+/* ── ROUTE CARDS ── */
 .route-card { position: relative; padding: 12px 16px; border-bottom: 1px solid var(--line-soft); cursor: pointer; transition: background 0.12s; }
-.route-card:hover { background: var(--bg-2); }
-.route-card.selected { background: var(--bg-3); }
+.route-card:hover { background: rgba(31,47,68,0.6); }
+.route-card.selected { background: rgba(31,47,68,0.8); }
 .route-card.selected::before { content: ''; position: absolute; left: 0; top: 0; bottom: 0; width: 2px;
-  background: var(--cyan); box-shadow: 0 0 8px var(--cyan-glow); }
+  background: var(--cyan); box-shadow: 0 0 10px var(--cyan-glow); }
 .route-card .row-top { display: flex; justify-content: space-between; align-items: center; margin-bottom: 6px; }
 .route-card .route-id { font-family: var(--font-mono); font-size: var(--fs-md); color: var(--text-0); font-weight: 500; }
 .route-card .vehicle { font-size: var(--fs-sm); color: var(--text-2); display: flex; align-items: center; gap: 6px; }
@@ -133,84 +145,313 @@ button:focus-visible { outline: 1px solid var(--cyan); outline-offset: 2px; }
   font-size: var(--fs-sm); color: var(--text-2); cursor: pointer; transition: all 0.12s; font-family: var(--font-mono); }
 .filters .f:hover { color: var(--text-1); border-color: var(--line-strong); }
 .filters .f.active { color: var(--bg-0); background: var(--cyan); border-color: var(--cyan); font-weight: 600; }
-.map-wrap { position: relative; width: 100%; height: 100%; overflow: hidden;
-  background: radial-gradient(ellipse 60% 40% at 30% 20%, rgba(93,214,230,0.05), transparent 70%),
-    radial-gradient(ellipse 50% 40% at 75% 75%, rgba(167,139,250,0.04), transparent 70%),
-    linear-gradient(180deg, #0a131e 0%, #060a10 100%); }
-.map-svg { width: 100%; height: 100%; display: block; }
-.map-overlay-tl { position: absolute; top: 12px; left: 12px; display: flex; flex-direction: column; gap: 6px; z-index: 5; }
-.map-overlay-tr { position: absolute; top: 12px; right: 12px; display: flex; flex-direction: column; gap: 6px; z-index: 5; align-items: flex-end; }
-.map-overlay-bl { position: absolute; bottom: 12px; left: 12px; display: flex; flex-direction: column; gap: 8px; z-index: 5; }
-.map-overlay-br { position: absolute; bottom: 12px; right: 12px; z-index: 5; }
-.map-btn { background: rgba(23,34,48,0.55); backdrop-filter: blur(14px) saturate(1.2);
-  -webkit-backdrop-filter: blur(14px) saturate(1.2); border: 1px solid rgba(148,178,214,0.15);
-  box-shadow: 0 1px 0 rgba(255,255,255,0.05) inset, 0 4px 14px -4px rgba(0,0,0,0.5);
+
+/* ── MAP — COMMAND SPHERE (Fisheye HUD) ── */
+/* The map itself stays a flat rectangle (Leaflet requires this).
+   The SPHERE ILLUSION comes from:
+     - circular mask (border-radius: 50% + overflow: hidden)
+     - inset cyan glow (inner atmosphere)
+     - radial gradient vignette (fisheye lens darkening)
+     - rotating dashed HUD rings around the sphere
+     - very subtle perspective rotateY for 3D feel (no rotateX — doesn't break tiles) */
+.map-sphere-stage { position: absolute; inset: 0;
+  display: flex; align-items: center; justify-content: center;
+  background:
+    radial-gradient(ellipse 65% 45% at 50% 50%, rgba(93,214,230,0.04), transparent 70%),
+    radial-gradient(ellipse 40% 30% at 20% 80%, rgba(167,139,250,0.025), transparent 70%),
+    #05080f;
+  overflow: hidden; }
+.map-sphere-container {
+  position: relative;
+  width: min(92%, 92vh);
+  aspect-ratio: 1 / 1;
+  max-width: 100%;
+  transform: perspective(1400px) rotateY(2deg);
+  transition: transform 0.6s ease; }
+.map-sphere-stage:hover .map-sphere-container { transform: perspective(1400px) rotateY(0deg) scale(1.01); }
+.map-sphere {
+  position: absolute; inset: 0;
+  border-radius: 50%;
+  overflow: hidden;
+  box-shadow:
+    inset 0 0 60px rgba(93,214,230,0.28),
+    inset 0 0 140px rgba(93,214,230,0.12),
+    inset 0 0 0 2px rgba(93,214,230,0.45),
+    0 0 0 1px rgba(93,214,230,0.15),
+    0 0 80px rgba(93,214,230,0.22),
+    0 20px 80px rgba(0,0,0,0.85); }
+.map-el { width: 100%; height: 100%; background: #0a1018; }
+/* Fisheye vignette — darkens edges, bright center */
+.map-fisheye {
+  position: absolute; inset: 0;
+  pointer-events: none;
+  border-radius: 50%;
+  background:
+    radial-gradient(circle at 50% 48%,
+      transparent 0%,
+      transparent 40%,
+      rgba(11,17,32,0.12) 62%,
+      rgba(11,17,32,0.42) 82%,
+      rgba(11,17,32,0.75) 96%,
+      rgba(5,8,15,0.92) 100%);
+  z-index: 410; }
+/* Subtle specular highlight — top-left sphere sheen */
+.map-sheen {
+  position: absolute; inset: 0;
+  pointer-events: none;
+  border-radius: 50%;
+  background: radial-gradient(ellipse 40% 28% at 32% 22%,
+    rgba(255,255,255,0.06) 0%, transparent 60%);
+  z-index: 411;
+  mix-blend-mode: screen; }
+/* Dashed HUD rings — concentric, rotating */
+.map-hud-ring {
+  position: absolute;
+  border: 1px dashed rgba(93,214,230,0.28);
+  border-radius: 50%;
+  pointer-events: none;
+  animation: rotate-cw 80s linear infinite; }
+.map-hud-ring.r1 { inset: -3%; }
+.map-hud-ring.r2 { inset: -8%; border-color: rgba(93,214,230,0.18); animation: rotate-ccw 120s linear infinite; border-style: dotted; }
+.map-hud-ring.r3 { inset: -14%; border-color: rgba(93,214,230,0.1); animation: rotate-cw 180s linear infinite; }
+.map-hud-ring.r4 { inset: -20%; border-color: rgba(93,214,230,0.06); border-style: dashed; animation: rotate-ccw 240s linear infinite; }
+@keyframes rotate-cw  { from { transform: rotate(0); } to { transform: rotate(360deg); } }
+@keyframes rotate-ccw { from { transform: rotate(0); } to { transform: rotate(-360deg); } }
+/* Coordinate tick marks around the sphere */
+.map-sphere-ticks {
+  position: absolute; inset: -2%;
+  pointer-events: none;
+  border-radius: 50%; }
+.map-sphere-ticks::before, .map-sphere-ticks::after {
+  content: ''; position: absolute; left: 50%; width: 1px; height: 8px;
+  background: var(--cyan); box-shadow: 0 0 6px var(--cyan); }
+.map-sphere-ticks::before { top: -4px; transform: translateX(-50%); }
+.map-sphere-ticks::after  { bottom: -4px; transform: translateX(-50%); }
+/* Cardinal labels — N/E/S/W orbital */
+.map-cardinal { position: absolute; font-family: var(--font-mono); font-size: 10px;
+  font-weight: 600; color: var(--cyan); text-shadow: 0 0 6px var(--cyan-glow);
+  letter-spacing: 0.15em; pointer-events: none; z-index: 420; }
+.map-cardinal.n { top: -22px; left: 50%; transform: translateX(-50%); }
+.map-cardinal.s { bottom: -22px; left: 50%; transform: translateX(-50%); }
+.map-cardinal.e { right: -22px; top: 50%; transform: translateY(-50%) rotate(90deg); }
+.map-cardinal.w { left: -22px; top: 50%; transform: translateY(-50%) rotate(-90deg); }
+/* Orbital coordinate text */
+.map-orbital-text {
+  position: absolute; inset: -6%;
+  pointer-events: none; z-index: 415;
+  animation: rotate-cw 180s linear infinite; }
+.map-orbital-text svg { width: 100%; height: 100%; }
+.map-orbital-text text { fill: rgba(93,214,230,0.45); font-family: var(--font-mono); font-size: 10px; letter-spacing: 0.08em; }
+/* Leaflet overrides — dark satellite style */
+.leaflet-container { background: #0a1018 !important; font-family: var(--font-ui) !important; }
+.leaflet-tile-pane { filter: brightness(0.88) saturate(0.75) contrast(1.1); }
+.leaflet-control-attribution { display: none; }
+/* HUD Grid overlay */
+.map-hud-grid {
+  position: absolute; inset: 0; pointer-events: none; z-index: 400;
+  background-image:
+    linear-gradient(rgba(93,214,230,0.05) 1px, transparent 1px),
+    linear-gradient(90deg, rgba(93,214,230,0.05) 1px, transparent 1px);
+  background-size: 44px 44px;
+  mask-image: radial-gradient(ellipse 90% 80% at 50% 50%, black 40%, transparent 100%);
+  -webkit-mask-image: radial-gradient(ellipse 90% 80% at 50% 50%, black 40%, transparent 100%); }
+/* Scan line sweep */
+.map-scan-line {
+  position: absolute; left: 0; right: 0; height: 2px; pointer-events: none; z-index: 401;
+  background: linear-gradient(90deg, transparent, rgba(93,214,230,0.4), transparent);
+  animation: scanLine 4s linear infinite; }
+@keyframes scanLine { 0% { top: 0; opacity: 0.8; } 80% { opacity: 0.8; } 100% { top: 100%; opacity: 0; } }
+
+/* Map overlay panels */
+.map-wrap { position: relative; width: 100%; height: 100%;
+  min-height: 400px; background: #0a1018; overflow: hidden; }
+/* Ensure Leaflet panes sit below overlays but above background */
+.leaflet-pane { z-index: 100; }
+.leaflet-top, .leaflet-bottom { z-index: 200; }
+.map-overlay-tl { position: absolute; top: 12px; left: 12px; display: flex; flex-direction: column; gap: 6px; z-index: 500; }
+.map-overlay-tr { position: absolute; top: 12px; right: 12px; display: flex; flex-direction: column; gap: 6px; z-index: 500; align-items: flex-end; }
+.map-overlay-bl { position: absolute; bottom: 12px; left: 12px; display: flex; flex-direction: column; gap: 8px; z-index: 500; }
+.map-overlay-br { position: absolute; bottom: 12px; right: 12px; z-index: 500; }
+.map-btn { background: rgba(19,30,48,0.75); backdrop-filter: blur(14px) saturate(1.2);
+  -webkit-backdrop-filter: blur(14px) saturate(1.2); border: 1px solid rgba(148,178,214,0.18);
+  box-shadow: 0 1px 0 rgba(255,255,255,0.06) inset, 0 4px 14px -4px rgba(0,0,0,0.6);
   width: 30px; height: 30px; border-radius: var(--radius-sm); display: flex; align-items: center; justify-content: center;
   color: var(--text-1); cursor: pointer; transition: all 0.12s; font-size: 14px; }
-.map-btn:hover { border-color: var(--line-strong); color: var(--text-0); }
-.map-btn.active { background: var(--cyan-soft); border-color: var(--cyan); color: var(--cyan); }
-.map-layer-toggle { background: rgba(23,34,48,0.55); backdrop-filter: blur(14px) saturate(1.2);
+.map-btn:hover { border-color: var(--line-strong); color: var(--text-0); background: rgba(31,47,68,0.85); }
+.map-btn.active { background: var(--cyan-soft); border-color: var(--cyan); color: var(--cyan); box-shadow: 0 0 8px var(--cyan-glow); }
+.map-layer-toggle { background: rgba(19,30,48,0.75); backdrop-filter: blur(14px) saturate(1.2);
   -webkit-backdrop-filter: blur(14px) saturate(1.2); border: 1px solid rgba(148,178,214,0.15); border-radius: var(--radius-md);
-  box-shadow: 0 1px 0 rgba(255,255,255,0.05) inset, 0 4px 14px -4px rgba(0,0,0,0.5);
+  box-shadow: 0 1px 0 rgba(255,255,255,0.05) inset, 0 4px 14px -4px rgba(0,0,0,0.6);
   padding: 6px 10px; display: flex; align-items: center; gap: 10px; font-size: var(--fs-sm); }
 .map-layer-toggle .toggle-item { display: flex; align-items: center; gap: 5px; cursor: pointer; color: var(--text-2); }
 .map-layer-toggle .toggle-item.on { color: var(--text-0); }
 .map-layer-toggle .dot { width: 7px; height: 7px; border-radius: 2px; }
-.map-legend { background: rgba(23,34,48,0.55); backdrop-filter: blur(14px) saturate(1.2);
+.map-legend { background: rgba(19,30,48,0.75); backdrop-filter: blur(14px) saturate(1.2);
   -webkit-backdrop-filter: blur(14px) saturate(1.2); border: 1px solid rgba(148,178,214,0.15); border-radius: var(--radius-md);
-  box-shadow: 0 1px 0 rgba(255,255,255,0.05) inset, 0 6px 18px -6px rgba(0,0,0,0.55);
+  box-shadow: 0 1px 0 rgba(255,255,255,0.05) inset, 0 6px 18px -6px rgba(0,0,0,0.6);
   padding: 10px 12px; font-size: var(--fs-sm); min-width: 180px; }
 .map-legend .title { color: var(--text-3); font-size: var(--fs-xs); text-transform: uppercase; letter-spacing: 0.08em; margin-bottom: 6px; }
 .map-legend .li { display: flex; align-items: center; gap: 8px; color: var(--text-1); margin-bottom: 3px; }
 .map-legend .swatch { width: 14px; height: 3px; border-radius: 2px; }
-.map-hud { background: rgba(23,34,48,0.55); backdrop-filter: blur(14px) saturate(1.2);
+.map-hud { background: rgba(19,30,48,0.75); backdrop-filter: blur(14px) saturate(1.2);
   -webkit-backdrop-filter: blur(14px) saturate(1.2); border: 1px solid rgba(148,178,214,0.15); border-radius: var(--radius-md);
-  box-shadow: 0 1px 0 rgba(255,255,255,0.05) inset, 0 4px 14px -4px rgba(0,0,0,0.5);
+  box-shadow: 0 1px 0 rgba(255,255,255,0.05) inset, 0 4px 14px -4px rgba(0,0,0,0.6);
   padding: 8px 12px; font-size: var(--fs-sm); font-family: var(--font-mono); }
 .map-hud .k { color: var(--text-3); margin-right: 6px; }
 .map-hud .v { color: var(--text-0); }
 .map-coords { position: absolute; bottom: 12px; left: 50%; transform: translateX(-50%);
   font-family: var(--font-mono); font-size: var(--fs-xs); color: var(--text-3);
-  background: rgba(12,18,25,0.6); padding: 3px 8px; border-radius: 3px; z-index: 4; }
-.stop-pin { cursor: pointer; transition: transform 0.12s; }
-.stop-pin:hover { transform: scale(1.1); }
-.stop-pin text { font-family: var(--font-mono); font-size: 9px; font-weight: 700; }
-.map-tooltip { position: absolute; z-index: 10; background: rgba(7,11,17,0.96); backdrop-filter: blur(10px);
+  background: rgba(11,17,32,0.7); padding: 3px 8px; border-radius: 3px; z-index: 500; border: 1px solid var(--line-soft); }
+.map-tooltip { position: absolute; z-index: 600; background: rgba(7,11,17,0.97); backdrop-filter: blur(10px);
   border: 1px solid var(--line-strong); border-radius: var(--radius-md); padding: 10px 12px;
-  font-size: var(--fs-sm); pointer-events: none; min-width: 200px; box-shadow: 0 8px 24px rgba(0,0,0,0.5); }
+  font-size: var(--fs-sm); pointer-events: none; min-width: 200px; box-shadow: 0 8px 24px rgba(0,0,0,0.6); }
 .map-tooltip .tt-title { color: var(--text-0); font-weight: 600; margin-bottom: 4px; display: flex; justify-content: space-between; }
 .map-tooltip .tt-row { display: flex; justify-content: space-between; gap: 12px; margin: 2px 0; }
 .map-tooltip .tt-row .k { color: var(--text-3); }
 .map-tooltip .tt-row .v { color: var(--text-1); font-family: var(--font-mono); }
+
+/* ── LEAFLET STOP MARKERS ── */
+.lf-stop-marker { pointer-events: all; cursor: pointer; }
+.lf-stop-pin {
+  width: 26px; height: 26px; border-radius: 50%;
+  display: flex; align-items: center; justify-content: center;
+  font-family: var(--font-mono); font-size: 9px; font-weight: 700;
+  border: 2px solid; position: relative;
+  box-shadow: 0 0 10px currentColor, 0 2px 8px rgba(0,0,0,0.8);
+  transition: transform 0.15s; }
+.lf-stop-pin.ok { background: rgba(7,11,17,0.92); border-color: #8ee68a; color: #8ee68a; }
+.lf-stop-pin.miss { background: rgba(7,11,17,0.92); border-color: #ff6b6b; color: #ff6b6b; }
+.lf-stop-pin:hover { transform: scale(1.25); }
+.lf-stop-badge {
+  position: absolute; top: -22px; left: 50%; transform: translateX(-50%);
+  background: rgba(11,17,32,0.92); backdrop-filter: blur(8px);
+  border: 1px solid rgba(148,178,214,0.2); border-radius: 3px;
+  padding: 2px 6px; white-space: nowrap;
+  font-family: var(--font-mono); font-size: 9px; color: var(--text-1);
+  box-shadow: 0 2px 8px rgba(0,0,0,0.5);
+  pointer-events: none; }
+.lf-stop-badge.risk-high { border-color: rgba(255,107,107,0.4); color: var(--red); }
+.lf-stop-badge.risk-med { border-color: rgba(245,185,69,0.4); color: var(--amber); }
+.lf-stop-badge.risk-low { border-color: rgba(93,214,230,0.3); color: var(--cyan); }
+.lf-depot-marker {
+  width: 20px; height: 20px; background: var(--cyan);
+  border: 2px solid rgba(11,17,32,0.8); border-radius: 3px;
+  box-shadow: 0 0 14px var(--cyan-glow), 0 0 28px rgba(93,214,230,0.2); }
+.lf-miss-alert {
+  position: absolute; top: -8px; right: -8px;
+  width: 14px; height: 14px; background: #ff6b6b; color: #0B1120;
+  border-radius: 50%; font-size: 9px; font-weight: 900;
+  display: flex; align-items: center; justify-content: center;
+  border: 1.5px solid #0B1120;
+  box-shadow: 0 0 10px #ff6b6b;
+  animation: pulse 1.2s infinite; }
+/* Leaflet tooltip dark override */
+.leaflet-tooltip.lf-tip {
+  background: rgba(7,11,17,0.96); color: var(--text-1);
+  border: 1px solid var(--line-strong); border-radius: 4px;
+  box-shadow: 0 8px 20px rgba(0,0,0,0.6);
+  font-family: var(--font-mono); font-size: 11px;
+  padding: 6px 9px; }
+.leaflet-tooltip.lf-tip::before { border-top-color: rgba(7,11,17,0.96) !important; }
+
+/* ── DETAIL + 3D COMPARISON CARDS ── */
 .detail-head { padding: var(--space-4); border-bottom: 1px solid var(--line); }
 .detail-head .route-title { display: flex; justify-content: space-between; align-items: flex-start; margin-bottom: 10px; }
 .detail-head .rid { font-family: var(--font-mono); font-size: var(--fs-xl); color: var(--text-0); font-weight: 600; letter-spacing: -0.01em; }
 .detail-head .rid .sub { color: var(--text-3); font-size: var(--fs-sm); margin-left: 8px; font-weight: 400; }
-.comparison { display: grid; grid-template-columns: 1fr 1fr; gap: 10px; margin-top: 12px; perspective: 1000px; }
-.comparison .col { background: rgba(23,34,48,0.55); backdrop-filter: blur(14px) saturate(1.2);
-  -webkit-backdrop-filter: blur(14px) saturate(1.2); border: 1px solid rgba(148,178,214,0.15); border-radius: var(--radius-md);
-  padding: 12px 14px; box-shadow: 0 1px 0 rgba(255,255,255,0.05) inset, 0 10px 24px -10px rgba(0,0,0,0.6);
-  transform: rotateX(2deg); transition: transform 0.2s; }
-.comparison .col:hover { transform: rotateX(0) translateY(-2px); }
+
+/* 3D CARD CONTAINER */
+.comparison { display: grid; grid-template-columns: 1fr 1fr; gap: 10px; margin-top: 12px;
+  perspective: 900px; perspective-origin: 50% 50%; }
+.comparison .col {
+  background: rgba(19,30,48,0.6);
+  backdrop-filter: blur(20px) saturate(1.3);
+  -webkit-backdrop-filter: blur(20px) saturate(1.3);
+  border: 1px solid rgba(148,178,214,0.13);
+  border-radius: var(--radius-md);
+  padding: 12px 14px;
+  box-shadow:
+    0 1px 0 rgba(255,255,255,0.06) inset,
+    0 12px 28px -10px rgba(0,0,0,0.7),
+    0 0 0 1px rgba(148,178,214,0.04) inset;
+  transform: rotateX(3deg) translateZ(0);
+  transition: transform 0.25s cubic-bezier(0.34,1.56,0.64,1), box-shadow 0.25s ease; }
+.comparison .col:hover {
+  transform: rotateX(-1deg) translateY(-4px) translateZ(12px) scale(1.01);
+  box-shadow:
+    0 1px 0 rgba(255,255,255,0.08) inset,
+    0 20px 40px -12px rgba(0,0,0,0.8),
+    0 0 0 1px rgba(148,178,214,0.08) inset; }
 .comparison .col .label { font-size: var(--fs-xs); color: var(--text-3); text-transform: uppercase; letter-spacing: 0.08em; margin-bottom: 4px; }
 .comparison .col .big { font-family: var(--font-mono); font-size: var(--fs-2xl); color: var(--text-0); font-weight: 500; letter-spacing: -0.02em; }
 .comparison .col .unit { color: var(--text-3); font-size: var(--fs-sm); margin-left: 2px; }
-.comparison .col.optimized { background: linear-gradient(180deg, rgba(93,214,230,0.1), rgba(23,34,48,0.55));
-  border-color: rgba(93,214,230,0.25);
-  box-shadow: 0 1px 0 rgba(255,255,255,0.05) inset, 0 0 0 1px rgba(93,214,230,0.1) inset, 0 10px 30px -10px rgba(93,214,230,0.25); }
-.comparison .col.optimized .big { color: var(--cyan); text-shadow: 0 0 14px var(--cyan-glow); }
-.delta-banner { margin-top: 10px; padding: 10px 12px; background: var(--lime-soft);
-  border: 1px solid rgba(142,230,138,0.3); border-radius: var(--radius-md);
+.comparison .col.optimized {
+  background: linear-gradient(145deg, rgba(93,214,230,0.12) 0%, rgba(19,30,48,0.6) 60%);
+  border-color: rgba(93,214,230,0.28);
+  box-shadow:
+    0 1px 0 rgba(255,255,255,0.07) inset,
+    0 0 0 1px rgba(93,214,230,0.12) inset,
+    0 12px 32px -10px rgba(93,214,230,0.3),
+    0 0 24px -8px rgba(93,214,230,0.2); }
+.comparison .col.optimized .big { color: var(--cyan); text-shadow: 0 0 20px var(--cyan-glow), 0 0 40px rgba(93,214,230,0.15); }
+.comparison .col.optimized:hover {
+  box-shadow:
+    0 1px 0 rgba(255,255,255,0.1) inset,
+    0 0 0 1px rgba(93,214,230,0.2) inset,
+    0 20px 48px -12px rgba(93,214,230,0.4),
+    0 0 32px -6px rgba(93,214,230,0.25); }
+.delta-banner { margin-top: 10px; padding: 10px 12px; background: rgba(142,230,138,0.08);
+  border: 1px solid rgba(142,230,138,0.25); border-radius: var(--radius-md);
   display: flex; align-items: center; gap: 10px; font-size: var(--fs-md); color: var(--text-0); }
 .delta-banner .arrow { color: var(--lime); font-family: var(--font-mono); font-weight: 700; }
 .delta-banner .metric { font-family: var(--font-mono); color: var(--lime); font-weight: 600; }
+
+/* ── TACTICAL SLATE BUTTONS ── */
 .actions { display: flex; gap: 8px; padding: 12px var(--space-4); border-bottom: 1px solid var(--line); }
 .btn { flex: 1; padding: 8px 12px; border-radius: var(--radius-sm); font-size: var(--fs-md); font-weight: 500;
-  transition: all 0.12s; text-align: center; border: 1px solid transparent; }
-.btn-primary { background: var(--cyan); color: var(--bg-0); }
-.btn-primary:hover { background: #7ee3f0; box-shadow: 0 0 12px var(--cyan-glow); }
-.btn-ghost { border-color: var(--line); color: var(--text-1); background: var(--bg-2); }
-.btn-ghost:hover { border-color: var(--line-strong); color: var(--text-0); }
+  transition: all 0.15s; text-align: center; border: 1px solid transparent; letter-spacing: 0.01em; }
+.btn-primary {
+  background: linear-gradient(135deg, var(--cyan) 0%, #3ab8ca 100%);
+  color: #080e1a;
+  box-shadow: 0 0 0 1px rgba(93,214,230,0.3), 0 4px 12px rgba(93,214,230,0.25); }
+.btn-primary:hover {
+  background: linear-gradient(135deg, #7ee3f0 0%, var(--cyan) 100%);
+  box-shadow: 0 0 0 1px rgba(93,214,230,0.5), 0 6px 18px rgba(93,214,230,0.35); }
+.btn-ghost {
+  border-color: rgba(148,178,214,0.2);
+  color: var(--text-1);
+  background: linear-gradient(135deg, rgba(25,38,56,0.8), rgba(19,30,48,0.6)); }
+.btn-ghost:hover { border-color: rgba(148,178,214,0.35); color: var(--text-0); background: rgba(31,47,68,0.7); }
+
+/* ── EFFICIENCY GAIN WIDGET ── */
+.efficiency-widget {
+  position: absolute; top: 12px; right: 12px; z-index: 550;
+  background: linear-gradient(135deg, rgba(93,214,230,0.14) 0%, rgba(19,30,48,0.85) 60%);
+  backdrop-filter: blur(16px) saturate(1.3);
+  -webkit-backdrop-filter: blur(16px) saturate(1.3);
+  border: 1px solid rgba(93,214,230,0.3);
+  border-radius: var(--radius-lg);
+  padding: 10px 16px 10px 14px;
+  min-width: 168px;
+  box-shadow:
+    0 0 0 1px rgba(93,214,230,0.1) inset,
+    0 0 24px -6px rgba(93,214,230,0.35),
+    0 8px 24px -8px rgba(0,0,0,0.7);
+  animation: fadeIn 0.5s ease both; }
+.efficiency-widget .ew-label { font-size: 9px; font-weight: 600; text-transform: uppercase; letter-spacing: 0.1em;
+  color: var(--cyan); opacity: 0.8; margin-bottom: 3px; font-family: var(--font-mono); }
+.efficiency-widget .ew-main { display: flex; align-items: baseline; gap: 3px; }
+.efficiency-widget .ew-num { font-family: var(--font-mono); font-size: 28px; font-weight: 600;
+  color: var(--cyan); text-shadow: 0 0 20px var(--cyan-glow), 0 0 40px rgba(93,214,230,0.15);
+  letter-spacing: -0.03em; line-height: 1; }
+.efficiency-widget .ew-unit { font-family: var(--font-mono); font-size: var(--fs-sm); color: var(--text-2); }
+.efficiency-widget .ew-sub { font-size: var(--fs-xs); color: var(--lime); margin-top: 3px; font-family: var(--font-mono); }
+.efficiency-widget .ew-sub2 { font-size: 9px; color: var(--text-3); margin-top: 1px; font-family: var(--font-mono); }
+.efficiency-widget .ew-pulse { width: 6px; height: 6px; background: var(--cyan); border-radius: 50%;
+  box-shadow: 0 0 6px var(--cyan); display: inline-block; margin-right: 4px;
+  animation: pulse 1.8s infinite; }
+
+/* ── TIMELINE / GANTT ── */
 .timeline { padding: var(--space-4); }
 .timeline-head { display: flex; justify-content: space-between; align-items: center; margin-bottom: 10px; }
 .timeline-head .tabs { display: flex; gap: 2px; background: var(--bg-2); border-radius: var(--radius-sm); padding: 2px; }
@@ -218,7 +459,7 @@ button:focus-visible { outline: 1px solid var(--cyan); outline-offset: 2px; }
 .timeline-head .tabs button.active { background: var(--bg-4); color: var(--text-0); }
 .gantt { display: flex; flex-direction: column; gap: 3px; }
 .gantt-row { display: grid; grid-template-columns: 60px 1fr 55px; align-items: center; gap: 8px; padding: 4px 0; font-size: var(--fs-sm); }
-.gantt-row:hover { background: var(--bg-2); }
+.gantt-row:hover { background: rgba(31,47,68,0.4); }
 .gantt-row .label { font-family: var(--font-mono); color: var(--text-2); font-size: var(--fs-xs); }
 .gantt-row .track { position: relative; height: 16px; background: var(--bg-2); border-radius: 3px; overflow: hidden; }
 .gantt-row .window { position: absolute; top: 0; bottom: 0; background: var(--cyan-soft); border-left: 1px solid var(--cyan); border-right: 1px solid var(--cyan); }
@@ -230,6 +471,8 @@ button:focus-visible { outline: 1px solid var(--cyan); outline-offset: 2px; }
 .gantt-row .delay.ok { color: var(--text-2); }
 .gantt-axis { display: grid; grid-template-columns: 60px 1fr 55px; gap: 8px; margin-bottom: 6px; font-size: var(--fs-xs); color: var(--text-3); font-family: var(--font-mono); }
 .gantt-axis .ticks { display: flex; justify-content: space-between; }
+
+/* ── STOPS LIST ── */
 .stops-list { padding: 0 var(--space-4) var(--space-4); }
 .stop-row { display: grid; grid-template-columns: 24px 1fr auto; gap: 10px; padding: 10px 0;
   border-bottom: 1px solid var(--line-soft); align-items: center; }
@@ -251,9 +494,11 @@ button:focus-visible { outline: 1px solid var(--cyan); outline-offset: 2px; }
 .cond-pill.fog { background: rgba(167,139,250,0.12); color: var(--violet); }
 .cond-pill.rain { background: rgba(93,214,230,0.1); color: #88c4d6; }
 .cond-pill.clear { background: var(--bg-3); color: var(--text-2); }
-.tweaks-panel { position: fixed; bottom: 50px; right: 16px; z-index: 50; width: 280px;
-  background: var(--bg-1); border: 1px solid var(--line-strong); border-radius: var(--radius-lg);
-  box-shadow: 0 20px 48px rgba(0,0,0,0.6); overflow: hidden; }
+
+/* ── TWEAKS PANEL ── */
+.tweaks-panel { position: fixed; bottom: 50px; right: 16px; z-index: 900; width: 280px;
+  background: rgba(14,22,40,0.97); border: 1px solid var(--line-strong); border-radius: var(--radius-lg);
+  box-shadow: 0 20px 48px rgba(0,0,0,0.7); overflow: hidden; backdrop-filter: blur(16px); }
 .tweaks-panel .tp-head { padding: 10px 14px; border-bottom: 1px solid var(--line);
   display: flex; justify-content: space-between; align-items: center; background: var(--bg-2); }
 .tweaks-panel .tp-head h4 { margin: 0; font-size: var(--fs-md); color: var(--text-0); font-weight: 600; }
@@ -262,7 +507,8 @@ button:focus-visible { outline: 1px solid var(--cyan); outline-offset: 2px; }
 .tp-seg { display: flex; background: var(--bg-2); border: 1px solid var(--line); border-radius: var(--radius-sm); padding: 2px; }
 .tp-seg button { flex: 1; padding: 5px 8px; border-radius: 3px; font-size: var(--fs-sm); color: var(--text-2); }
 .tp-seg button.active { background: var(--bg-4); color: var(--text-0); }
-.spark { display: inline-block; vertical-align: middle; }
+
+/* ── MODEL CARD ── */
 .model-card { padding: var(--space-4); border-top: 1px solid var(--line); }
 .model-card h4 { margin: 0 0 8px; font-size: var(--fs-md); color: var(--text-0); font-weight: 600; }
 .model-card .ai-dot { width: 6px; height: 6px; background: var(--cyan); border-radius: 50%; display: inline-block; margin-right: 6px; box-shadow: 0 0 6px var(--cyan); }
@@ -271,8 +517,10 @@ button:focus-visible { outline: 1px solid var(--cyan); outline-offset: 2px; }
 .feat-bar .fb { height: 4px; background: var(--bg-3); border-radius: 2px; overflow: hidden; }
 .feat-bar .fb .fill { height: 100%; background: var(--cyan); }
 .feat-bar .fv { color: var(--text-1); font-family: var(--font-mono); text-align: right; }
+
+/* ── ALERTS ── */
 .alert-item { display: flex; gap: 10px; padding: 10px 14px; border-bottom: 1px solid var(--line-soft); cursor: pointer; transition: background 0.12s; }
-.alert-item:hover { background: var(--bg-2); }
+.alert-item:hover { background: rgba(31,47,68,0.5); }
 .alert-item .pin { width: 4px; align-self: stretch; border-radius: 2px; }
 .alert-item.critical .pin { background: var(--red); box-shadow: 0 0 6px var(--red); }
 .alert-item.warning .pin { background: var(--amber); box-shadow: 0 0 4px var(--amber); }
@@ -281,26 +529,78 @@ button:focus-visible { outline: 1px solid var(--cyan); outline-offset: 2px; }
 .alert-item .body .desc { color: var(--text-2); font-size: var(--fs-sm); }
 .alert-item .body .meta { color: var(--text-3); font-size: var(--fs-xs); margin-top: 3px; font-family: var(--font-mono); }
 .alert-item .time { color: var(--text-3); font-family: var(--font-mono); font-size: var(--fs-xs); white-space: nowrap; }
+
+/* ── KPI STRIP ── */
 .kpi-strip { display: grid; grid-template-columns: repeat(4, 1fr); gap: 1px; background: var(--line); border-bottom: 1px solid var(--line); }
-.kpi-strip .kpi { background: var(--bg-1); padding: 10px 14px; }
+.kpi-strip .kpi { background: rgba(14,22,40,0.9); padding: 10px 14px; }
 .kpi-strip .kpi .k { font-size: var(--fs-xs); color: var(--text-3); text-transform: uppercase; letter-spacing: 0.08em; margin-bottom: 3px; }
 .kpi-strip .kpi .v { font-family: var(--font-mono); font-size: var(--fs-xl); color: var(--text-0); font-weight: 500; letter-spacing: -0.02em; }
 .kpi-strip .kpi .v .unit { color: var(--text-3); font-size: var(--fs-sm); margin-left: 2px; }
 .kpi-strip .kpi .trend { font-family: var(--font-mono); font-size: var(--fs-xs); color: var(--lime); margin-top: 2px; }
 .kpi-strip .kpi .trend.down { color: var(--red); }
+.spark { display: inline-block; vertical-align: middle; }
 </style>
 </head>
 <body>
 <div id="root"></div>
 
-<script src="https://unpkg.com/react@18.3.1/umd/react.development.js" integrity="sha384-hD6/rw4ppMLGNu3tX5cjIb+uRZ7UkRJ6BPkLpg4hAu/6onKUg4lLsHAs9EBPT82L" crossorigin="anonymous"></script>
-<script src="https://unpkg.com/react-dom@18.3.1/umd/react-dom.development.js" integrity="sha384-u6aeetuaXnQ38mYT8rp6sbXaQe3NL9t+IBXmnYxwkUI2Hw4bsp2Wvmx4yRQF1uAm" crossorigin="anonymous"></script>
-<script src="https://unpkg.com/@babel/standalone@7.29.0/babel.min.js" integrity="sha384-m08KidiNqLdpJqLq95G/LEi8Qvjl/xUYll3QILypMoQ65QorJ9Lvtp2RXYGBFj1y" crossorigin="anonymous"></script>
+<script src="https://unpkg.com/react@18.3.1/umd/react.development.js"></script>
+<script src="https://unpkg.com/react-dom@18.3.1/umd/react-dom.development.js"></script>
+<script src="https://unpkg.com/@babel/standalone@7.29.0/babel.min.js"></script>
+<script src="https://unpkg.com/leaflet@1.9.4/dist/leaflet.js"></script>
 
 <script type="text/babel">
-const { useState, useEffect, useMemo, useRef } = React;
+const { useState, useEffect, useMemo, useRef, Component } = React;
 
-// ── default stub (replaced by API on load) ──
+// API base — explicit same-origin URL so relative paths never misresolve
+const API_BASE = window.location.origin;
+console.log('[BOOT] API_BASE =', API_BASE);
+
+// ═══════════════════════════════════════════
+//  ERROR BOUNDARY
+// ═══════════════════════════════════════════
+class ErrorBoundary extends Component {
+  constructor(props) {
+    super(props);
+    this.state = { hasError: false, error: null, info: null };
+  }
+  static getDerivedStateFromError(error) { return { hasError: true, error }; }
+  componentDidCatch(error, info) {
+    console.error('[ErrorBoundary] CRASH in', this.props.label || 'app', error, info);
+    this.setState({ info });
+  }
+  render() {
+    if (this.state.hasError) {
+      const minimal = this.props.minimal;
+      const msg = this.state.error && (this.state.error.message || String(this.state.error));
+      if (minimal) {
+        return (
+          <div style={{ padding: 16, color: 'var(--red)', fontFamily: 'var(--font-mono)', fontSize: 11 }}>
+            ⚠ {this.props.label || 'Bileşen'} çöktü<br/>
+            <span style={{ color: 'var(--text-3)', fontSize: 10 }}>{msg}</span>
+          </div>
+        );
+      }
+      return (
+        <div style={{
+          display: 'flex', alignItems: 'center', justifyContent: 'center',
+          height: '100vh', background: '#0B1120', color: 'var(--red)',
+          fontFamily: 'var(--font-mono)', fontSize: 14, flexDirection: 'column', gap: 12, padding: 40, textAlign: 'center'
+        }}>
+          <div style={{ fontSize: 20, fontWeight: 600 }}>RENDER HATASI</div>
+          <div style={{ color: 'var(--text-2)', maxWidth: 600 }}>{msg}</div>
+          <pre style={{ color: 'var(--text-3)', fontSize: 10, maxWidth: 800, overflow: 'auto', maxHeight: 200, textAlign: 'left' }}>
+            {this.state.info && this.state.info.componentStack}
+          </pre>
+          <button className="btn btn-primary" style={{ maxWidth: 200 }}
+            onClick={() => window.location.reload()}>Yeniden Yükle</button>
+        </div>
+      );
+    }
+    return this.props.children;
+  }
+}
+
 window.LOGISTICS_DATA = {
   MODEL_STATS: { mae_min: '—', r2: '—', features_used: 29, top_features: {} },
   CIRCUITY: {},
@@ -323,8 +623,8 @@ function fmtTime(str) {
 }
 
 function mergeToDesignFormat(routeDetail, optimResp) {
-  const route = routeDetail.route;
-  const rawStops = routeDetail.stops || [];
+  const route = (routeDetail && routeDetail.route) || {};
+  const rawStops = (routeDetail && routeDetail.stops) || [];
   const origStops = (optimResp.original_order && optimResp.original_order.stops) || [];
   const optStops  = (optimResp.optimized_order && optimResp.optimized_order.stops) || [];
 
@@ -332,7 +632,6 @@ function mergeToDesignFormat(routeDetail, optimResp) {
   const optMap  = {};  optStops.forEach(s  => { optMap[s.stop_id]  = s; });
   const rawMap  = {};  rawStops.forEach(s  => { rawMap[s.stop_id]  = s; });
 
-  // Use original order as canonical stop list
   const stopIds = origStops.map(s => s.stop_id);
 
   const stops = stopIds.map(sid => {
@@ -351,21 +650,21 @@ function mergeToDesignFormat(routeDetail, optimResp) {
       package_weight_kg: orig.package_weight_kg ?? raw.package_weight_kg ?? 0,
       planned_service_min: raw.planned_service_min ?? 10,
       original: {
-        predicted_arrival:       fmtTime(orig.predicted_arrival),
-        within_time_window:      orig.within_time_window      ?? true,
+        predicted_arrival:        fmtTime(orig.predicted_arrival),
+        within_time_window:       orig.within_time_window      ?? true,
         predicted_stop_delay_min: orig.predicted_stop_delay_min ?? 0,
       },
       optimized: {
-        predicted_arrival:       fmtTime(opt.predicted_arrival),
-        within_time_window:      opt.within_time_window       ?? true,
+        predicted_arrival:        fmtTime(opt.predicted_arrival),
+        within_time_window:       opt.within_time_window       ?? true,
         predicted_stop_delay_min: opt.predicted_stop_delay_min ?? 0,
       },
       dynamic_conditions: {
-        weather:           dc.weather           || 'clear',
-        traffic:           dc.traffic           || 'low',
-        congestion_ratio:  dc.congestion_ratio  ?? 0,
-        delay_risk_score:  dc.delay_risk_score  ?? 0,
-        road_surface:      dc.road_surface      || 'dry',
+        weather:          dc.weather           || 'clear',
+        traffic:          dc.traffic           || 'low',
+        congestion_ratio: dc.congestion_ratio  ?? 0,
+        delay_risk_score: dc.delay_risk_score  ?? 0,
+        road_surface:     dc.road_surface      || 'dry',
       },
     };
   });
@@ -376,11 +675,11 @@ function mergeToDesignFormat(routeDetail, optimResp) {
   const severity = origRate < 0.3 ? 'critical' : origRate < 0.7 ? 'warning' : 'ok';
 
   return {
-    route_id:    route.route_id,
-    vehicle_id:  route.vehicle_id  || route.route_id,
+    route_id:    route.route_id || 'UNKNOWN',
+    vehicle_id:  route.vehicle_id || route.route_id || '—',
     vehicle_type: route.vehicle_type || 'van',
-    num_stops:   route.num_stops,
-    total_distance_km: route.total_distance_km,
+    num_stops:   route.num_stops ?? 0,
+    total_distance_km: route.total_distance_km ?? 0,
     departure_planned: route.departure_planned,
     weather_condition: (optimResp.conditions && optimResp.conditions.weather) || route.weather_condition || 'clear',
     temperature_c: route.temperature_c   ?? 0,
@@ -388,7 +687,7 @@ function mergeToDesignFormat(routeDetail, optimResp) {
     wind_speed_kmh: route.wind_speed_kmh ?? 10,
     traffic_level: (optimResp.conditions && optimResp.conditions.traffic) || route.traffic_level || 'low',
     severity,
-    delay_factor:               optimResp.delay_factor                ?? 1,
+    delay_factor:                 optimResp.delay_factor                ?? 1,
     rf_predicted_total_delay_min: optimResp.rf_predicted_total_delay_min ?? 0,
     original_metrics: {
       on_time_rate:              origM.on_time_rate              ?? 0,
@@ -406,232 +705,225 @@ function mergeToDesignFormat(routeDetail, optimResp) {
 }
 
 // ═══════════════════════════════════════════
-//  MAP COMPONENTS  (from Map.jsx)
+//  EFFICIENCY GAIN WIDGET
 // ═══════════════════════════════════════════
 
-const MAP_BBOX = { minLat: 39.18, maxLat: 39.82, minLon: 36.82, maxLon: 37.42 };
-
-function project(lat, lon, width, height, pad = 30) {
-  const x = pad + ((lon - MAP_BBOX.minLon) / (MAP_BBOX.maxLon - MAP_BBOX.minLon)) * (width - 2 * pad);
-  const y = pad + (1 - (lat - MAP_BBOX.minLat) / (MAP_BBOX.maxLat - MAP_BBOX.minLat)) * (height - 2 * pad);
-  return [x, y];
-}
-
-const SIVAS_CENTER = { lat: 39.7477, lon: 37.0179 };
-
-function TerrainBase({ width, height }) {
-  const grid = [];
-  const step = 48;
-  for (let x = 0; x <= width; x += step) grid.push(<line key={`vx${x}`} x1={x} y1={0} x2={x} y2={height} stroke="rgba(148,178,214,0.04)" strokeWidth="1" />);
-  for (let y = 0; y <= height; y += step) grid.push(<line key={`hy${y}`} x1={0} y1={y} x2={width} y2={y} stroke="rgba(148,178,214,0.04)" strokeWidth="1" />);
-  const contours = [];
-  const seed = (i) => Math.sin(i * 12.9898) * 43758.5453;
-  for (let i = 0; i < 8; i++) {
-    const pts = [];
-    const yBase = (i + 1) * (height / 9);
-    for (let x = 0; x <= width; x += 20) {
-      const noise = (seed(i * 100 + x) - Math.floor(seed(i * 100 + x))) * 26 - 13;
-      const noise2 = Math.sin((x + i * 50) / 60) * 14;
-      pts.push(`${x},${yBase + noise + noise2}`);
-    }
-    contours.push(<polyline key={`c${i}`} points={pts.join(' ')} fill="none" stroke="rgba(93,214,230,0.05)" strokeWidth="1" />);
-  }
-  return <g>{grid}{contours}</g>;
-}
-
-function RoadNetwork({ width, height }) {
-  const roads = [
-    { d: "M 40 260 Q 220 240 420 280 T 780 250", w: 3, label: "D260" },
-    { d: "M 320 30 Q 360 200 400 360 T 480 720", w: 3, label: "D850" },
-    { d: "M 80 80 Q 240 180 380 160 T 720 120", w: 1.5 },
-    { d: "M 60 480 Q 200 440 360 500 T 740 540", w: 1.5 },
-    { d: "M 600 40 Q 650 200 680 380", w: 1.5 },
-    { d: "M 140 620 Q 300 580 460 660", w: 1.5 }
-  ];
+function EfficiencyGainWidget({ routes }) {
+  if (!routes || routes.length === 0) return null;
+  const totalDelay = routes.reduce((s, r) => s + ((r.improvement && r.improvement.delay_reduction_min) || 0), 0);
+  const avgDelta   = routes.reduce((s, r) => s + ((r.improvement && r.improvement.on_time_rate_delta) || 0), 0) / routes.length;
+  const critFixed  = routes.filter(r => r.severity !== 'critical' && r.optimized_metrics && r.optimized_metrics.on_time_rate > 0.7).length;
   return (
-    <g>
-      {roads.map((r, i) => (
-        <g key={i}>
-          <path d={r.d} stroke="rgba(148,178,214,0.14)" strokeWidth={r.w + 2} fill="none" strokeLinecap="round" />
-          <path d={r.d} stroke="rgba(148,178,214,0.25)" strokeWidth={r.w} fill="none" strokeLinecap="round" />
-        </g>
-      ))}
-      <g fontFamily="var(--font-mono)" fontSize="9" fill="rgba(148,178,214,0.35)" fontWeight="500">
-        <rect x="385" y="270" width="28" height="12" fill="rgba(12,18,25,0.8)" stroke="rgba(148,178,214,0.14)" rx="2" />
-        <text x="399" y="279" textAnchor="middle" fill="rgba(148,178,214,0.6)">D260</text>
-        <rect x="360" y="380" width="28" height="12" fill="rgba(12,18,25,0.8)" stroke="rgba(148,178,214,0.14)" rx="2" />
-        <text x="374" y="389" textAnchor="middle" fill="rgba(148,178,214,0.6)">D850</text>
-      </g>
-    </g>
-  );
-}
-
-function WeatherOverlay({ width, height, scenario, visible }) {
-  if (!visible) return null;
-  const cells = scenario === 'snow' ? [
-    { cx: 180, cy: 180, r: 120, intensity: 0.9, type: 'snow' },
-    { cx: 450, cy: 340, r: 160, intensity: 0.7, type: 'snow' },
-    { cx: 650, cy: 520, r: 100, intensity: 0.55, type: 'snow' }
-  ] : scenario === 'rain' ? [
-    { cx: 280, cy: 220, r: 140, intensity: 0.5, type: 'rain' },
-    { cx: 560, cy: 420, r: 170, intensity: 0.7, type: 'rain' }
-  ] : scenario === 'fog' ? [
-    { cx: 320, cy: 300, r: 220, intensity: 0.5, type: 'fog' },
-    { cx: 550, cy: 500, r: 180, intensity: 0.6, type: 'fog' }
-  ] : [];
-  return (
-    <g style={{ mixBlendMode: 'screen' }}>
-      {cells.map((c, i) => {
-        const fillId = `wcell-${c.type}-${i}`;
-        return (
-          <g key={i}>
-            <defs>
-              <radialGradient id={fillId} cx="50%" cy="50%" r="50%">
-                {c.type === 'snow' && <>
-                  <stop offset="0%" stopColor="#5dd6e6" stopOpacity={c.intensity * 0.35} />
-                  <stop offset="70%" stopColor="#5dd6e6" stopOpacity={c.intensity * 0.08} />
-                  <stop offset="100%" stopColor="#5dd6e6" stopOpacity="0" />
-                </>}
-                {c.type === 'rain' && <>
-                  <stop offset="0%" stopColor="#88c4d6" stopOpacity={c.intensity * 0.3} />
-                  <stop offset="100%" stopColor="#88c4d6" stopOpacity="0" />
-                </>}
-                {c.type === 'fog' && <>
-                  <stop offset="0%" stopColor="#a78bfa" stopOpacity={c.intensity * 0.22} />
-                  <stop offset="100%" stopColor="#a78bfa" stopOpacity="0" />
-                </>}
-              </radialGradient>
-            </defs>
-            <circle cx={c.cx} cy={c.cy} r={c.r} fill={`url(#${fillId})`} />
-            {c.type === 'snow' && (
-              <circle cx={c.cx} cy={c.cy} r={c.r} fill="none" stroke="rgba(93,214,230,0.2)" strokeWidth="1" strokeDasharray="3 4" />
-            )}
-          </g>
-        );
-      })}
-    </g>
-  );
-}
-
-function RouteLines({ route, width, height, mode, hoveredStop, onStopHover }) {
-  if (!route || !route.stops) return null;
-  const origStops = [...route.stops];
-  const origPoints = origStops.map(s => project(s.latitude, s.longitude, width, height));
-  const optPoints = [...route.stops]
-    .map(s => ({ s, t: s.optimized.predicted_arrival }))
-    .sort((a, b) => a.t.localeCompare(b.t))
-    .map(({ s }) => project(s.latitude, s.longitude, width, height));
-
-  const showOrig = mode === 'both' || mode === 'original';
-  const showOpt  = mode === 'both' || mode === 'optimized';
-  const pathStr  = (pts) => pts.map((p, i) => (i === 0 ? 'M' : 'L') + p.join(' ')).join(' ');
-
-  return (
-    <g>
-      {showOrig && (
-        <path d={pathStr(origPoints)} fill="none" stroke="#ff6b6b" strokeOpacity="0.9" strokeWidth="2.5" strokeDasharray="2 4" strokeLinejoin="round" />
-      )}
-      {showOpt && (
-        <path d={pathStr(optPoints)} fill="none" stroke="#5dd6e6" strokeOpacity="0.9" strokeWidth="2.5" strokeLinejoin="round" filter="url(#glow)" />
-      )}
-      {route.stops.map((s, i) => {
-        const [x, y] = project(s.latitude, s.longitude, width, height);
-        const origOk = s.original.within_time_window;
-        const color  = !origOk ? '#ff6b6b' : '#8ee68a';
-        const isHovered = hoveredStop === s.stop_id;
-        return (
-          <g key={s.stop_id} className="stop-pin"
-             onMouseEnter={() => onStopHover(s.stop_id)}
-             onMouseLeave={() => onStopHover(null)}
-             transform={`translate(${x},${y})`}>
-            {isHovered && <circle r="14" fill={color} opacity="0.2" />}
-            <circle r="9" fill="rgba(7,11,17,0.9)" stroke={color} strokeWidth="1.5" />
-            <text y="3" textAnchor="middle" fill={color}>{i + 1}</text>
-          </g>
-        );
-      })}
-    </g>
-  );
-}
-
-function AllRoutesOverlay({ routes, selectedId, width, height }) {
-  return (
-    <g opacity="0.45">
-      {routes.filter(r => r.route_id !== selectedId && r.stops).map(r => {
-        const pts = r.stops.map(s => project(s.latitude, s.longitude, width, height));
-        const d   = pts.map((p, i) => (i === 0 ? 'M' : 'L') + p.join(' ')).join(' ');
-        return (
-          <path key={r.route_id} d={d} stroke="rgba(148,178,214,0.25)" strokeWidth="1.2" fill="none" strokeDasharray="1 3" />
-        );
-      })}
-    </g>
-  );
-}
-
-function Depot({ width, height }) {
-  const [x, y] = project(SIVAS_CENTER.lat, SIVAS_CENTER.lon, width, height);
-  return (
-    <g transform={`translate(${x},${y})`}>
-      <circle r="22" fill="none" stroke="rgba(93,214,230,0.18)" strokeWidth="1" strokeDasharray="2 3" />
-      <circle r="14" fill="none" stroke="rgba(93,214,230,0.3)" strokeWidth="1" />
-      <rect x="-5" y="-5" width="10" height="10" fill="#5dd6e6" />
-      <text y="-18" textAnchor="middle" fontFamily="var(--font-mono)" fontSize="9" fill="rgba(93,214,230,0.9)" fontWeight="600" letterSpacing="0.05em">SİVAS DEPO</text>
-    </g>
-  );
-}
-
-function MapTooltip({ stop, x, y }) {
-  if (!stop) return null;
-  const d = stop.dynamic_conditions;
-  return (
-    <div className="map-tooltip" style={{ left: x + 12, top: y - 8 }}>
-      <div className="tt-title">
-        <span className="mono">{stop.stop_id}</span>
-        <span className={`badge ${stop.original.within_time_window ? 'ok' : 'critical'}`}>
-          {stop.original.within_time_window ? 'ORİJİNAL: UYGUN' : 'ORİJİNAL: KAÇIRILDI'}
-        </span>
+    <div className="efficiency-widget">
+      <div className="ew-label"><span className="ew-pulse"></span>Verimlilik Kazancı</div>
+      <div className="ew-main">
+        <span className="ew-num">−{totalDelay.toFixed(0)}</span>
+        <span className="ew-unit"> dk</span>
       </div>
-      <div className="tt-row"><span className="k">Yol türü</span><span className="v">{stop.road_type}</span></div>
-      <div className="tt-row"><span className="k">Paket</span><span className="v">{stop.package_count} ad · {Number(stop.package_weight_kg).toFixed(1)} kg</span></div>
-      <div className="tt-row"><span className="k">Pencere</span><span className="v">{stop.time_window_open}–{stop.time_window_close}</span></div>
-      <div className="tt-row"><span className="k">Varış (orj.)</span>
-        <span className="v" style={{ color: stop.original.within_time_window ? 'var(--lime)' : 'var(--red)' }}>{stop.original.predicted_arrival}</span>
-      </div>
-      <div className="tt-row"><span className="k">Varış (opt.)</span>
-        <span className="v" style={{ color: 'var(--cyan)' }}>{stop.optimized.predicted_arrival}</span>
-      </div>
-      <div style={{ marginTop: 6, paddingTop: 6, borderTop: '1px solid var(--line-soft)' }}>
-        <div className="tt-row"><span className="k">Hava / Yol</span>
-          <span className="v">
-            <span className={`cond-pill ${d.weather}`} style={{ marginRight: 4 }}>{d.weather}</span>
-            <span className={`cond-pill ${d.road_surface}`}>{d.road_surface}</span>
-          </span>
-        </div>
-        <div className="tt-row"><span className="k">Tıkanıklık</span><span className="v">{(d.congestion_ratio * 100).toFixed(0)}%</span></div>
-        <div className="tt-row"><span className="k">Risk skoru</span><span className="v">{Number(d.delay_risk_score).toFixed(2)}</span></div>
-      </div>
+      <div className="ew-sub">↑ +{(avgDelta * 100).toFixed(1)}% zamanında oran</div>
+      <div className="ew-sub2">{routes.length} rota · {critFixed} kurtarıldı · RF R² {window.LOGISTICS_DATA.MODEL_STATS.r2}</div>
     </div>
   );
 }
 
+// ═══════════════════════════════════════════
+//  MAP VIEW — LEAFLET SATELLITE + SPHERICAL HUD
+// ═══════════════════════════════════════════
+
+const SIVAS_CENTER = [39.7477, 37.0179];
+const SIVAS_BOUNDS = [[39.18, 36.82], [39.82, 37.42]];
+
 function MapView({ route, allRoutes, weatherVisible, weatherScenario, routeMode, onRouteMode }) {
-  const wrapRef = useRef(null);
-  const [size, setSize]             = useState({ width: 800, height: 600 });
+  const mapElRef    = useRef(null);
+  const leafletRef  = useRef(null);
+  const markersRef  = useRef([]);
+  const polyRef     = useRef([]);
   const [hoveredStop, setHoveredStop] = useState(null);
-  const [mousePos, setMousePos]     = useState({ x: 0, y: 0 });
-  const [showAllRoutes, setShowAllRoutes] = useState(true);
-  const [showRoads, setShowRoads]   = useState(true);
-  const [showWeather, setShowWeather] = useState(weatherVisible);
+  const [mousePos, setMousePos]       = useState({ x: 0, y: 0 });
+  const wrapRef = useRef(null);
 
-  useEffect(() => { setShowWeather(weatherVisible); }, [weatherVisible]);
+  // Init Leaflet — wait until container is measurable
+  useEffect(() => {
+    if (leafletRef.current || !mapElRef.current) return;
+    if (typeof L === 'undefined') {
+      console.error('[MapView] Leaflet (L) not loaded — check CDN');
+      return;
+    }
 
+    let cancelled = false;
+
+    const tryInit = (attempt = 0) => {
+      if (cancelled || leafletRef.current) return;
+      const el = mapElRef.current;
+      if (!el) return;
+      const rect = el.getBoundingClientRect();
+      console.log(`[MapView] init attempt ${attempt} · container ${rect.width.toFixed(0)}×${rect.height.toFixed(0)}`);
+
+      if ((rect.width < 50 || rect.height < 50) && attempt < 20) {
+        setTimeout(() => tryInit(attempt + 1), 120);
+        return;
+      }
+
+      try {
+        const map = L.map(el, {
+          center: SIVAS_CENTER, zoom: 10,
+          zoomControl: false, attributionControl: false,
+          preferCanvas: false,
+        });
+
+        // Primary: CartoDB Dark Matter — reliable CORS, dark theme, no API key
+        const primaryLayer = L.tileLayer(
+          'https://{s}.basemaps.cartocdn.com/dark_all/{z}/{x}/{y}.png',
+          { maxZoom: 19, subdomains: 'abcd' }
+        );
+        primaryLayer.on('tileload',  () => console.log('[tiles] ✓ CartoDB tile loaded'));
+        primaryLayer.on('tileerror', e => console.warn('[tiles] ✗ CartoDB tile FAILED', e && e.tile && e.tile.src));
+        primaryLayer.addTo(map);
+
+        // Fallback: if CartoDB fails within 5s, switch to OpenStreetMap
+        let primaryOk = false;
+        primaryLayer.once('tileload', () => { primaryOk = true; });
+        setTimeout(() => {
+          if (!primaryOk && leafletRef.current) {
+            console.warn('[tiles] CartoDB did not respond in 5s — falling back to OpenStreetMap');
+            map.removeLayer(primaryLayer);
+            L.tileLayer('https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png', {
+              maxZoom: 19, subdomains: 'abc'
+            }).addTo(map);
+          }
+        }, 5000);
+
+        leafletRef.current = map;
+        console.log('[MapView] Leaflet ready');
+
+        // Multiple invalidateSize calls to cover layout thrash
+        [50, 200, 500, 1000].forEach(ms => setTimeout(() => {
+          if (!cancelled && leafletRef.current) {
+            leafletRef.current.invalidateSize();
+          }
+        }, ms));
+      } catch (e) {
+        console.error('[MapView] Leaflet init failed:', e);
+      }
+    };
+
+    tryInit(0);
+    return () => { cancelled = true; };
+  }, []);
+
+  // Force invalidateSize whenever route changes (layout may have shifted)
+  useEffect(() => {
+    const map = leafletRef.current;
+    if (!map) return;
+    setTimeout(() => map.invalidateSize(), 80);
+  }, [route && route.route_id]);
+
+  // Update stop markers + route polylines when route changes
+  useEffect(() => {
+    const map = leafletRef.current;
+    if (!map) return;
+
+    // Clear old
+    markersRef.current.forEach(m => map.removeLayer(m));
+    markersRef.current = [];
+    polyRef.current.forEach(p => map.removeLayer(p));
+    polyRef.current = [];
+
+    if (!route || !Array.isArray(route.stops) || route.stops.length === 0) {
+      console.log('[MapView] no stops to render for route', route && route.route_id);
+      return;
+    }
+
+    // Filter stops with valid coordinates
+    const validStops = route.stops.filter(s =>
+      typeof s.latitude === 'number' && typeof s.longitude === 'number' &&
+      !isNaN(s.latitude) && !isNaN(s.longitude) &&
+      s.latitude !== 0 && s.longitude !== 0
+    );
+    console.log(`[MapView] ${route.route_id}: ${validStops.length}/${route.stops.length} stops with valid coords`);
+    if (validStops.length === 0) return;
+
+    const origLatLngs = validStops.map(s => [s.latitude, s.longitude]);
+    const optSorted = [...validStops]
+      .sort((a, b) => (a.optimized.predicted_arrival || '').localeCompare(b.optimized.predicted_arrival || ''))
+      .map(s => [s.latitude, s.longitude]);
+
+    if (routeMode === 'both' || routeMode === 'original') {
+      const origPoly = L.polyline(origLatLngs, {
+        color: '#ff6b6b', weight: 3, opacity: 0.85,
+        dashArray: '6 8', lineCap: 'round'
+      }).addTo(map);
+      polyRef.current.push(origPoly);
+    }
+
+    if (routeMode === 'both' || routeMode === 'optimized') {
+      const optPoly = L.polyline(optSorted, {
+        color: '#5dd6e6', weight: 3.5, opacity: 0.9,
+      }).addTo(map);
+      polyRef.current.push(optPoly);
+    }
+
+    // Depot marker
+    const depotIcon = L.divIcon({
+      html: '<div class="lf-depot-marker"></div>',
+      className: '', iconSize: [20, 20], iconAnchor: [10, 10],
+    });
+    const depot = L.marker(SIVAS_CENTER, { icon: depotIcon }).addTo(map);
+    markersRef.current.push(depot);
+
+    // Stop markers — with window-miss alert
+    validStops.forEach((s, i) => {
+      const ok  = s.original.within_time_window;
+      const d   = s.dynamic_conditions || {};
+      const risk = d.delay_risk_score || 0;
+      const riskClass = risk > 0.6 ? 'risk-high' : risk > 0.3 ? 'risk-med' : 'risk-low';
+      const cong = ((d.congestion_ratio || 0) * 100).toFixed(0);
+      const weather = d.weather || 'clear';
+      const surface = d.road_surface || 'dry';
+
+      // Build badge — if stop MISSES time window, show "!" alert
+      const missAlert = !ok ? '<span class="lf-miss-alert" title="Zaman penceresi kaçırıldı">!</span>' : '';
+      const badgeText = !ok
+        ? `⚠ ${weather} · ${cong}%`
+        : `${weather} · ${cong}%`;
+
+      const icon = L.divIcon({
+        html: `
+          <div class="lf-stop-marker">
+            <div class="lf-stop-pin ${ok ? 'ok' : 'miss'}">${i + 1}${missAlert}</div>
+            <div class="lf-stop-badge ${ok ? riskClass : 'risk-high'}">${badgeText}</div>
+          </div>`,
+        className: '', iconSize: [80, 50], iconAnchor: [13, 26],
+      });
+
+      const tooltip = `
+        <b>${s.stop_id}</b><br/>
+        Varış (orj.): <b style="color:${ok?'#8ee68a':'#ff6b6b'}">${s.original.predicted_arrival}</b><br/>
+        Pencere: ${s.time_window_open}–${s.time_window_close}<br/>
+        Hava: ${weather} · Yol: ${surface}<br/>
+        Tıkanıklık: ${cong}% · Risk: ${risk.toFixed(2)}
+        ${!ok ? '<br/><b style="color:#ff6b6b">⚠ PENCERE KAÇIRILDI</b>' : ''}`;
+
+      const marker = L.marker([s.latitude, s.longitude], { icon })
+        .bindTooltip(tooltip, { direction: 'top', offset: [0, -28], className: 'lf-tip' })
+        .addTo(map);
+      markersRef.current.push(marker);
+    });
+
+    // Fit bounds with padding
+    if (origLatLngs.length > 0) {
+      try {
+        map.fitBounds(origLatLngs, { padding: [60, 60], maxZoom: 12 });
+        setTimeout(() => map.invalidateSize(), 120);
+      } catch(e) { console.warn('[MapView] fitBounds failed:', e); }
+    }
+  }, [route, routeMode]);
+
+  // Resize observer
   useEffect(() => {
     if (!wrapRef.current) return;
-    const ro = new ResizeObserver(entries => {
-      for (const e of entries) {
-        const { width, height } = e.contentRect;
-        setSize({ width, height });
-      }
+    const ro = new ResizeObserver(() => {
+      if (leafletRef.current) leafletRef.current.invalidateSize();
     });
     ro.observe(wrapRef.current);
     return () => ro.disconnect();
@@ -641,37 +933,37 @@ function MapView({ route, allRoutes, weatherVisible, weatherScenario, routeMode,
 
   return (
     <div className="map-wrap" ref={wrapRef}
-         onMouseMove={(e) => {
-           const rect = wrapRef.current.getBoundingClientRect();
-           setMousePos({ x: e.clientX - rect.left, y: e.clientY - rect.top });
+         onMouseMove={e => {
+           if (!wrapRef.current) return;
+           const r = wrapRef.current.getBoundingClientRect();
+           setMousePos({ x: e.clientX - r.left, y: e.clientY - r.top });
          }}>
-      <svg className="map-svg" viewBox={`0 0 ${size.width} ${size.height}`} preserveAspectRatio="xMidYMid meet">
-        <defs>
-          <filter id="glow" x="-20%" y="-20%" width="140%" height="140%">
-            <feGaussianBlur stdDeviation="2.5" result="blur" />
-            <feMerge><feMergeNode in="blur" /><feMergeNode in="SourceGraphic" /></feMerge>
-          </filter>
-        </defs>
-        <TerrainBase width={size.width} height={size.height} />
-        {showRoads && <RoadNetwork width={size.width} height={size.height} />}
-        <WeatherOverlay width={size.width} height={size.height} scenario={weatherScenario} visible={showWeather} />
-        {showAllRoutes && <AllRoutesOverlay routes={allRoutes} selectedId={route && route.route_id} width={size.width} height={size.height} />}
-        <Depot width={size.width} height={size.height} />
-        {route && route.stops && (
-          <RouteLines route={route} width={size.width} height={size.height} mode={routeMode} hoveredStop={hoveredStop} onStopHover={setHoveredStop} />
-        )}
-        <g transform={`translate(${size.width - 120}, ${size.height - 30})`}>
-          <line x1="0" y1="0" x2="60" y2="0" stroke="rgba(148,178,214,0.4)" strokeWidth="1.5" />
-          <line x1="0" y1="-3" x2="0" y2="3" stroke="rgba(148,178,214,0.4)" strokeWidth="1.5" />
-          <line x1="60" y1="-3" x2="60" y2="3" stroke="rgba(148,178,214,0.4)" strokeWidth="1.5" />
-          <text x="30" y="-6" textAnchor="middle" fontFamily="var(--font-mono)" fontSize="9" fill="rgba(148,178,214,0.6)">20 km</text>
-        </g>
-      </svg>
 
+      {/* Command Sphere — fisheye lens effect */}
+      <div className="map-sphere-stage">
+        <div className="map-sphere-container">
+          <div className="map-hud-ring r4"></div>
+          <div className="map-hud-ring r3"></div>
+          <div className="map-hud-ring r2"></div>
+          <div className="map-hud-ring r1"></div>
+          <span className="map-cardinal n">N</span>
+          <span className="map-cardinal e">E</span>
+          <span className="map-cardinal s">S</span>
+          <span className="map-cardinal w">W</span>
+          <div className="map-sphere">
+            <div ref={mapElRef} className="map-el" style={{ width: '100%', height: '100%' }} />
+            <div className="map-fisheye"></div>
+            <div className="map-sheen"></div>
+          </div>
+        </div>
+      </div>
+
+      {/* Overlays — outside the tilt so they stay flat */}
       <div className="map-overlay-tl">
-        <button className="map-btn" title="Yakınlaştır">+</button>
-        <button className="map-btn" title="Uzaklaştır">−</button>
-        <button className="map-btn" title="Katmanlar">☰</button>
+        <button className="map-btn" title="Yakınlaştır" onClick={() => leafletRef.current && leafletRef.current.zoomIn()}>+</button>
+        <button className="map-btn" title="Uzaklaştır" onClick={() => leafletRef.current && leafletRef.current.zoomOut()}>−</button>
+        <button className="map-btn" title="Merkeze git"
+          onClick={() => leafletRef.current && leafletRef.current.setView(SIVAS_CENTER, 10)}>◎</button>
       </div>
 
       <div className="map-overlay-tr">
@@ -682,20 +974,13 @@ function MapView({ route, allRoutes, weatherVisible, weatherScenario, routeMode,
           <span className="k">MESAFE</span><span className="v">{route ? Number(route.total_distance_km).toFixed(1) : '—'} km</span>
         </div>
         <div className="map-layer-toggle">
-          <label className={`toggle-item ${showAllRoutes ? 'on' : ''}`}>
-            <input type="checkbox" checked={showAllRoutes} onChange={e => setShowAllRoutes(e.target.checked)} style={{ display: 'none' }} />
-            <span className="dot" style={{ background: showAllRoutes ? 'rgba(148,178,214,0.5)' : 'var(--bg-4)' }}></span>
-            <span>Filo</span>
+          <label className={`toggle-item on`}>
+            <span className="dot" style={{ background: 'rgba(93,214,230,0.7)' }}></span>
+            <span>SAT</span>
           </label>
-          <label className={`toggle-item ${showWeather ? 'on' : ''}`}>
-            <input type="checkbox" checked={showWeather} onChange={e => setShowWeather(e.target.checked)} style={{ display: 'none' }} />
-            <span className="dot" style={{ background: showWeather ? 'var(--cyan)' : 'var(--bg-4)' }}></span>
-            <span>Hava</span>
-          </label>
-          <label className={`toggle-item ${showRoads ? 'on' : ''}`}>
-            <input type="checkbox" checked={showRoads} onChange={e => setShowRoads(e.target.checked)} style={{ display: 'none' }} />
-            <span className="dot" style={{ background: showRoads ? 'rgba(148,178,214,0.5)' : 'var(--bg-4)' }}></span>
-            <span>Yollar</span>
+          <label className={`toggle-item on`}>
+            <span className="dot" style={{ background: 'var(--cyan)' }}></span>
+            <span>HUD</span>
           </label>
         </div>
       </div>
@@ -715,30 +1000,25 @@ function MapView({ route, allRoutes, weatherVisible, weatherScenario, routeMode,
           </div>
           <div className="li"><span className="swatch" style={{ background: '#ff6b6b' }}></span><span>Orijinal sıra</span></div>
           <div className="li"><span className="swatch" style={{ background: '#5dd6e6' }}></span><span>Optimize edilmiş</span></div>
-          <div className="li"><span className="swatch" style={{ background: 'rgba(148,178,214,0.4)', height: 2 }}></span><span>Diğer filo</span></div>
         </div>
       </div>
 
       <div className="map-overlay-br">
         <div className="map-hud" style={{ display: 'flex', flexDirection: 'column', gap: 2, padding: '8px 12px' }}>
-          <div style={{ fontSize: 10, color: 'var(--text-3)', textTransform: 'uppercase', letterSpacing: '0.08em', fontFamily: 'var(--font-ui)' }}>Circuity Faktörü</div>
+          <div style={{ fontSize: 9, color: 'var(--text-3)', textTransform: 'uppercase', letterSpacing: '0.08em', fontFamily: 'var(--font-ui)', marginBottom: 2 }}>Circuity Faktörü</div>
           <div><span className="k">dağ</span><span className="v">{((window.LOGISTICS_DATA.CIRCUITY && window.LOGISTICS_DATA.CIRCUITY.mountain) || 1.65).toFixed(2)}×</span></div>
           <div><span className="k">kırsal</span><span className="v">{((window.LOGISTICS_DATA.CIRCUITY && window.LOGISTICS_DATA.CIRCUITY.rural) || 1.45).toFixed(2)}×</span></div>
           <div><span className="k">kara</span><span className="v">{((window.LOGISTICS_DATA.CIRCUITY && window.LOGISTICS_DATA.CIRCUITY.highway) || 1.10).toFixed(2)}×</span></div>
         </div>
       </div>
 
-      <div className="map-coords">
-        39.75° N · 37.02° E — SİVAS BÖLGESİ · ZOOM 9.2
-      </div>
-
-      {hoveredStopData && <MapTooltip stop={hoveredStopData} x={mousePos.x} y={mousePos.y} />}
+      <div className="map-coords">39.75° N · 37.02° E — SİVAS BÖLGESİ · SAT</div>
     </div>
   );
 }
 
 // ═══════════════════════════════════════════
-//  PANEL COMPONENTS  (from Panels.jsx)
+//  PANEL COMPONENTS
 // ═══════════════════════════════════════════
 
 function VehicleIcon({ type }) {
@@ -776,9 +1056,12 @@ function FleetList({ routes, selectedId, onSelect, filter, onFilter }) {
       </div>
       <div className="filters">
         <div className={`f ${filter === 'all' ? 'active' : ''}`} onClick={() => onFilter('all')}>Tümü {counts.all}</div>
-        <div className={`f ${filter === 'critical' ? 'active' : ''}`} onClick={() => onFilter('critical')} style={filter==='critical'?{background:'var(--red)',borderColor:'var(--red)',color:'var(--bg-0)'}:{}}>Kritik {counts.critical}</div>
-        <div className={`f ${filter === 'warning' ? 'active' : ''}`} onClick={() => onFilter('warning')} style={filter==='warning'?{background:'var(--amber)',borderColor:'var(--amber)',color:'var(--bg-0)'}:{}}>Uyarı {counts.warning}</div>
-        <div className={`f ${filter === 'ok' ? 'active' : ''}`} onClick={() => onFilter('ok')} style={filter==='ok'?{background:'var(--lime)',borderColor:'var(--lime)',color:'var(--bg-0)'}:{}}>İyi {counts.ok}</div>
+        <div className={`f ${filter === 'critical' ? 'active' : ''}`} onClick={() => onFilter('critical')}
+          style={filter==='critical'?{background:'var(--red)',borderColor:'var(--red)',color:'var(--bg-0)'}:{}}>Kritik {counts.critical}</div>
+        <div className={`f ${filter === 'warning' ? 'active' : ''}`} onClick={() => onFilter('warning')}
+          style={filter==='warning'?{background:'var(--amber)',borderColor:'var(--amber)',color:'var(--bg-0)'}:{}}>Uyarı {counts.warning}</div>
+        <div className={`f ${filter === 'ok' ? 'active' : ''}`} onClick={() => onFilter('ok')}
+          style={filter==='ok'?{background:'var(--lime)',borderColor:'var(--lime)',color:'var(--bg-0)'}:{}}>İyi {counts.ok}</div>
       </div>
       <div className="pane-body">
         {filtered.map(r => (
@@ -861,7 +1144,6 @@ function TimelineGantt({ route }) {
   const tMin = Math.min(...allTimes.filter(t => t > 0)) - 15;
   const tMax = Math.max(...allTimes) + 15;
   const span = tMax - tMin || 1;
-
   const pctFor = (t) => ((parseT(t) - tMin) / span) * 100;
 
   const tickStep = span > 300 ? 120 : span > 120 ? 60 : 30;
@@ -869,7 +1151,7 @@ function TimelineGantt({ route }) {
   for (let t = Math.ceil(tMin / tickStep) * tickStep; t <= tMax; t += tickStep) {
     const h = Math.floor(t / 60) % 24;
     const m = t % 60;
-    ticks.push({ pct: ((t - tMin) / span) * 100, label: `${String(h).padStart(2, '0')}:${String(m).padStart(2, '0')}` });
+    ticks.push({ pct: ((t - tMin) / span) * 100, label: `${String(h).padStart(2,'0')}:${String(m).padStart(2,'0')}` });
   }
 
   return (
@@ -899,15 +1181,16 @@ function TimelineGantt({ route }) {
           const serviceWpct = (s.planned_service_min / span) * 100;
           return (
             <div className="gantt-row" key={s.stop_id}>
-              <div className="label">{String(i + 1).padStart(2, '0')} · {s.stop_id.slice(-5)}</div>
+              <div className="label">{String(i+1).padStart(2,'0')} · {s.stop_id.slice(-5)}</div>
               <div className="track">
                 <div className="window" style={{ left: `${winL}%`, width: `${winR - winL}%` }}></div>
                 {(mode === 'compare' || mode === 'original') && (
                   <div className={`bar ${s.original.within_time_window ? 'ok' : 'miss'}`}
-                       style={{ left: `${origL}%`, width: `${Math.max(serviceWpct, 1.2)}%`, top: mode === 'compare' ? 1 : 3, height: mode === 'compare' ? 4 : 10 }}></div>
+                       style={{ left: `${origL}%`, width: `${Math.max(serviceWpct, 1.2)}%`, top: mode==='compare'?1:3, height: mode==='compare'?4:10 }}></div>
                 )}
                 {(mode === 'compare' || mode === 'optimized') && (
-                  <div className="bar ok" style={{ background: 'var(--cyan)', boxShadow: '0 0 4px var(--cyan-glow)', left: `${optL}%`, width: `${Math.max(serviceWpct, 1.2)}%`, top: mode === 'compare' ? 11 : 3, height: mode === 'compare' ? 4 : 10 }}></div>
+                  <div className="bar ok" style={{ background: 'var(--cyan)', boxShadow: '0 0 4px var(--cyan-glow)',
+                    left: `${optL}%`, width: `${Math.max(serviceWpct, 1.2)}%`, top: mode==='compare'?11:3, height: mode==='compare'?4:10 }}></div>
                 )}
               </div>
               <div className={`delay ${s.original.within_time_window ? 'ok' : 'miss'}`}>
@@ -939,7 +1222,7 @@ function StopsList({ route }) {
                 <span>{s.package_count} pkt / {Number(s.package_weight_kg).toFixed(0)}kg</span>
                 <span>·</span>
                 <span className={`cond-pill ${d.weather}`}>{d.weather}</span>
-                <span className={`cond-pill ${d.road_surface}`}>{d.road_surface.replace('_', ' ')}</span>
+                <span className={`cond-pill ${d.road_surface}`}>{d.road_surface.replace('_',' ')}</span>
               </div>
             </div>
             <div className="arrival">
@@ -1008,12 +1291,14 @@ function ModelCard({ route }) {
 
 function DetailPane({ route, onApply, applied, onReOptimize }) {
   const [tab, setTab] = useState('timeline');
-
   if (!route) return <div style={{ padding: 20, color: 'var(--text-3)' }}>Bir rota seçin</div>;
 
-  const orig = route.original_metrics;
-  const opt  = route.optimized_metrics;
-  const imp  = route.improvement;
+  const orig = route.original_metrics  || { on_time_rate: 0, total_predicted_delay_min: 0, avg_delay_per_stop_min: 0 };
+  const opt  = route.optimized_metrics || { on_time_rate: 0, total_predicted_delay_min: 0, avg_delay_per_stop_min: 0 };
+  const imp  = route.improvement       || { on_time_rate_delta: 0, delay_reduction_min: 0 };
+  const vtype = route.vehicle_type || 'van';
+  const weatherCond = route.weather_condition || 'clear';
+  const trafficLvl  = route.traffic_level || 'low';
 
   return (
     <>
@@ -1022,7 +1307,7 @@ function DetailPane({ route, onApply, applied, onReOptimize }) {
           <div>
             <div className="rid">{route.route_id} <span className="sub">· {route.vehicle_id}</span></div>
             <div style={{ fontSize: 11, color: 'var(--text-2)', marginTop: 2, display: 'flex', gap: 8, alignItems: 'center' }}>
-              <VehicleIcon type={route.vehicle_type} /> {route.vehicle_type.toUpperCase()}
+              <VehicleIcon type={vtype} /> {vtype.toUpperCase()}
               <span>·</span>
               <span>{route.num_stops} durak · {Number(route.total_distance_km).toFixed(0)} km</span>
               <span>·</span>
@@ -1034,15 +1319,17 @@ function DetailPane({ route, onApply, applied, onReOptimize }) {
           </span>
         </div>
         <div style={{ display: 'flex', gap: 6, fontSize: 11, color: 'var(--text-2)', marginBottom: 8, flexWrap: 'wrap' }}>
-          <span className={`cond-pill ${route.weather_condition}`}>{route.weather_condition}</span>
-          <span className="mono">{route.temperature_c}°C</span>
+          <span className={`cond-pill ${weatherCond}`}>{weatherCond}</span>
+          <span className="mono">{route.temperature_c ?? '—'}°C</span>
           <span>·</span>
-          <span>Görüş {route.visibility_km}km</span>
+          <span>Görüş {route.visibility_km ?? '—'}km</span>
           <span>·</span>
-          <span>Rüzgar {route.wind_speed_kmh}km/s</span>
+          <span>Rüzgar {route.wind_speed_kmh ?? '—'}km/s</span>
           <span>·</span>
-          <span>Trafik: {route.traffic_level}</span>
+          <span>Trafik: {trafficLvl}</span>
         </div>
+
+        {/* 3D COMPARISON CARDS */}
         <div className="comparison">
           <div className="col">
             <div className="label">Mevcut Plan</div>
@@ -1053,7 +1340,7 @@ function DetailPane({ route, onApply, applied, onReOptimize }) {
             </div>
           </div>
           <div className="col optimized">
-            <div className="label" style={{ color: 'var(--cyan)' }}>Optimize Plan</div>
+            <div className="label" style={{ color: 'var(--cyan)' }}>⚡ Optimize Plan</div>
             <div className="big">{(opt.on_time_rate * 100).toFixed(0)}<span className="unit">%</span></div>
             <div style={{ fontSize: 11, color: 'var(--text-2)', marginTop: 2 }}>Zamanında teslimat</div>
             <div style={{ marginTop: 6, fontSize: 11, color: 'var(--text-3)', fontFamily: 'var(--font-mono)' }}>
@@ -1061,6 +1348,7 @@ function DetailPane({ route, onApply, applied, onReOptimize }) {
             </div>
           </div>
         </div>
+
         <div className="delta-banner">
           <span className="arrow">↗</span>
           <div style={{ flex: 1 }}>
@@ -1084,12 +1372,12 @@ function DetailPane({ route, onApply, applied, onReOptimize }) {
         <button className="btn btn-ghost" onClick={onReOptimize}>Yeniden Hesapla</button>
       </div>
 
-      <div style={{ display: 'flex', gap: 2, padding: '8px 16px 0', borderBottom: '1px solid var(--line)', background: 'var(--bg-1)' }}>
-        {[['timeline', 'Zaman'], ['stops', 'Duraklar'], ['model', 'AI Model']].map(([k, l]) => (
+      <div style={{ display: 'flex', gap: 2, padding: '8px 16px 0', borderBottom: '1px solid var(--line)', background: 'rgba(14,22,40,0.6)' }}>
+        {[['timeline','Zaman'],['stops','Duraklar'],['model','AI Model']].map(([k, l]) => (
           <button key={k} onClick={() => setTab(k)} style={{
             padding: '6px 10px', fontSize: 12, fontWeight: 500,
-            color: tab === k ? 'var(--text-0)' : 'var(--text-2)',
-            borderBottom: tab === k ? '1.5px solid var(--cyan)' : '1.5px solid transparent',
+            color: tab===k ? 'var(--text-0)' : 'var(--text-2)',
+            borderBottom: tab===k ? '1.5px solid var(--cyan)' : '1.5px solid transparent',
             marginBottom: -1
           }}>{l}</button>
         ))}
@@ -1107,27 +1395,28 @@ function DetailPane({ route, onApply, applied, onReOptimize }) {
 function AlertsStrip({ routes, onSelect }) {
   const alerts = useMemo(() => {
     const list = [];
-    routes.forEach(r => {
+    (routes || []).forEach(r => {
+      if (!r) return;
+      const wc = (r.weather_condition || 'clear').toUpperCase();
       if (r.severity === 'critical') {
         list.push({
-          severity: 'critical',
-          route_id: r.route_id,
+          severity: 'critical', route_id: r.route_id,
           title: `${r.route_id}: pencere kaçırma riski`,
-          desc: `${r.weather_condition.toUpperCase()} · görüş ${r.visibility_km}km · Delay factor ${Number(r.delay_factor).toFixed(2)}×`,
+          desc: `${wc} · görüş ${r.visibility_km ?? '—'}km · Delay factor ${Number(r.delay_factor || 1).toFixed(2)}×`,
           time: '—',
-          meta: `RF tahmini +${Number(r.rf_predicted_total_delay_min).toFixed(0)} dk gecikme`
+          meta: `RF tahmini +${Number(r.rf_predicted_total_delay_min || 0).toFixed(0)} dk gecikme`
         });
       }
-      if (r.stops) {
+      if (Array.isArray(r.stops)) {
         r.stops.forEach(s => {
+          if (!s || !s.original || !s.dynamic_conditions) return;
           if (!s.original.within_time_window && s.dynamic_conditions.road_surface === 'icy') {
             list.push({
-              severity: 'warning',
-              route_id: r.route_id,
+              severity: 'warning', route_id: r.route_id,
               title: `${s.stop_id}: BUZLU YOL + pencere riski`,
-              desc: `${r.route_id} · ${s.road_type} · varış ${s.original.predicted_arrival} (pencere ${s.time_window_close})`,
+              desc: `${r.route_id} · ${s.road_type || '—'} · varış ${s.original.predicted_arrival} (pencere ${s.time_window_close})`,
               time: s.original.predicted_arrival,
-              meta: `Risk skoru ${Number(s.dynamic_conditions.delay_risk_score).toFixed(2)} · tıkanıklık %${(s.dynamic_conditions.congestion_ratio*100).toFixed(0)}`
+              meta: `Risk skoru ${Number(s.dynamic_conditions.delay_risk_score || 0).toFixed(2)} · tıkanıklık %${((s.dynamic_conditions.congestion_ratio || 0)*100).toFixed(0)}`
             });
           }
         });
@@ -1173,9 +1462,9 @@ function TweaksPanel({ open, onClose, tweaks, setTweaks }) {
         <div className="tp-group">
           <div className="tp-label">Hava Senaryosu</div>
           <div className="tp-seg">
-            {['snow', 'rain', 'fog', 'clear'].map(w => (
-              <button key={w} className={tweaks.weather === w ? 'active' : ''} onClick={() => setTweaks({ ...tweaks, weather: w })}>
-                {w === 'snow' ? 'Kar' : w === 'rain' ? 'Yağmur' : w === 'fog' ? 'Sis' : 'Açık'}
+            {['snow','rain','fog','clear'].map(w => (
+              <button key={w} className={tweaks.weather===w?'active':''} onClick={()=>setTweaks({...tweaks,weather:w})}>
+                {w==='snow'?'Kar':w==='rain'?'Yağmur':w==='fog'?'Sis':'Açık'}
               </button>
             ))}
           </div>
@@ -1183,9 +1472,9 @@ function TweaksPanel({ open, onClose, tweaks, setTweaks }) {
         <div className="tp-group">
           <div className="tp-label">Yoğunluk</div>
           <div className="tp-seg">
-            {['compact', 'comfortable'].map(d => (
-              <button key={d} className={tweaks.density === d ? 'active' : ''} onClick={() => setTweaks({ ...tweaks, density: d })}>
-                {d === 'compact' ? 'Kompakt' : 'Rahat'}
+            {['compact','comfortable'].map(d => (
+              <button key={d} className={tweaks.density===d?'active':''} onClick={()=>setTweaks({...tweaks,density:d})}>
+                {d==='compact'?'Kompakt':'Rahat'}
               </button>
             ))}
           </div>
@@ -1193,16 +1482,16 @@ function TweaksPanel({ open, onClose, tweaks, setTweaks }) {
         <div className="tp-group">
           <div className="tp-label">Renk Aksanı</div>
           <div className="tp-seg">
-            {[['cyan', 'Cyan'], ['lime', 'Lime'], ['violet', 'Mor']].map(([k, l]) => (
-              <button key={k} className={tweaks.accent === k ? 'active' : ''} onClick={() => setTweaks({ ...tweaks, accent: k })}>{l}</button>
+            {[['cyan','Cyan'],['lime','Lime'],['violet','Mor']].map(([k,l]) => (
+              <button key={k} className={tweaks.accent===k?'active':''} onClick={()=>setTweaks({...tweaks,accent:k})}>{l}</button>
             ))}
           </div>
         </div>
         <div className="tp-group">
           <div className="tp-label">Düzen</div>
           <div className="tp-seg">
-            {[['split', 'Üçlü'], ['focus', 'Geniş Harita']].map(([k, l]) => (
-              <button key={k} className={tweaks.layout === k ? 'active' : ''} onClick={() => setTweaks({ ...tweaks, layout: k })}>{l}</button>
+            {[['split','Üçlü'],['focus','Geniş Harita']].map(([k,l]) => (
+              <button key={k} className={tweaks.layout===k?'active':''} onClick={()=>setTweaks({...tweaks,layout:k})}>{l}</button>
             ))}
           </div>
         </div>
@@ -1212,7 +1501,7 @@ function TweaksPanel({ open, onClose, tweaks, setTweaks }) {
 }
 
 // ═══════════════════════════════════════════
-//  APP SHELL COMPONENTS
+//  APP SHELL
 // ═══════════════════════════════════════════
 
 function Clock() {
@@ -1221,9 +1510,9 @@ function Clock() {
     const id = setInterval(() => setT(new Date()), 1000);
     return () => clearInterval(id);
   }, []);
-  const hh = String(t.getHours()).padStart(2, '0');
-  const mm = String(t.getMinutes()).padStart(2, '0');
-  const ss = String(t.getSeconds()).padStart(2, '0');
+  const hh = String(t.getHours()).padStart(2,'0');
+  const mm = String(t.getMinutes()).padStart(2,'0');
+  const ss = String(t.getSeconds()).padStart(2,'0');
   return <div className="clock">{hh}:{mm}:{ss}<span className="tz">UTC+3 SİVAS</span></div>;
 }
 
@@ -1233,11 +1522,11 @@ function TopBar({ activeNav, setActiveNav, criticalCount, onOpenTweaks, optimizi
       <div className="brand">
         <div className="mark"></div>
         <span>LOJİSTİK KOMUTA</span>
-        <span className="sub">v2.4 · sivas bölge</span>
+        <span className="sub">v3.0 · sivas bölge</span>
       </div>
       <nav>
         {[['overview','Genel Bakış'],['winter','Kış Operasyonları'],['fleet','Filo'],['routes','Rotalar'],['reports','Raporlar']].map(([k,l]) => (
-          <button key={k} className={activeNav === k ? 'active' : ''} onClick={() => setActiveNav(k)}>{l}</button>
+          <button key={k} className={activeNav===k?'active':''} onClick={()=>setActiveNav(k)}>{l}</button>
         ))}
       </nav>
       <div className="spacer"></div>
@@ -1260,10 +1549,10 @@ function TopBar({ activeNav, setActiveNav, criticalCount, onOpenTweaks, optimizi
 function KpiStrip({ routes }) {
   if (!routes || routes.length === 0) return <div className="kpi-strip"></div>;
   const total = routes.length;
-  const avgOrig = routes.reduce((s, r) => s + r.original_metrics.on_time_rate, 0) / total;
-  const avgOpt  = routes.reduce((s, r) => s + r.optimized_metrics.on_time_rate, 0) / total;
-  const totalDelayReduction = routes.reduce((s, r) => s + r.improvement.delay_reduction_min, 0);
-  const totalStops = routes.reduce((s, r) => s + r.num_stops, 0);
+  const avgOrig = routes.reduce((s, r) => s + ((r.original_metrics && r.original_metrics.on_time_rate) || 0), 0) / total;
+  const avgOpt  = routes.reduce((s, r) => s + ((r.optimized_metrics && r.optimized_metrics.on_time_rate) || 0), 0) / total;
+  const totalDelayReduction = routes.reduce((s, r) => s + ((r.improvement && r.improvement.delay_reduction_min) || 0), 0);
+  const totalStops = routes.reduce((s, r) => s + (r.num_stops || 0), 0);
   return (
     <div className="kpi-strip">
       <div className="kpi">
@@ -1318,8 +1607,8 @@ function Footer({ weather, routes }) {
 
 async function fetchAndMergeRoute(routeId, weather) {
   const [detail, optResult] = await Promise.all([
-    fetch(`/routes/${routeId}`).then(r => { if (!r.ok) throw new Error(r.status); return r.json(); }),
-    fetch(`/optimize/${routeId}`, {
+    fetch(`${API_BASE}/routes/${routeId}`).then(r => { if (!r.ok) throw new Error(r.status); return r.json(); }),
+    fetch(`${API_BASE}/optimize/${routeId}`, {
       method: 'POST',
       headers: { 'Content-Type': 'application/json' },
       body: JSON.stringify({ weather_condition: weather }),
@@ -1336,6 +1625,8 @@ function App() {
   const [routeMode,  setRouteMode]  = useState('both');
   const [applied,    setApplied]    = useState({});
   const [loading,    setLoading]    = useState(true);
+  const [loadError,  setLoadError]  = useState(null);
+  const [loadProgress, setLoadProgress] = useState({ done: 0, total: 0 });
   const [optimizing, setOptimizing] = useState(false);
   const [tweaks, setTweaks] = useState(() => {
     try {
@@ -1345,7 +1636,6 @@ function App() {
   });
   const [tweaksOpen, setTweaksOpen] = useState(false);
 
-  // Apply accent color
   useEffect(() => {
     const accentMap = {
       cyan:   { main: '#5dd6e6', soft: 'rgba(93,214,230,0.12)',  glow: 'rgba(93,214,230,0.35)' },
@@ -1358,7 +1648,6 @@ function App() {
     document.documentElement.style.setProperty('--cyan-glow', a.glow);
   }, [tweaks.accent]);
 
-  // Apply density
   useEffect(() => {
     if (tweaks.density === 'compact') {
       document.documentElement.style.setProperty('--space-4', '12px');
@@ -1369,18 +1658,35 @@ function App() {
     }
   }, [tweaks.density]);
 
-  // Save tweaks
   useEffect(() => {
     localStorage.setItem('sivas-tweaks', JSON.stringify(tweaks));
   }, [tweaks]);
 
+  // Run an array of async tasks in batches to avoid flooding the browser's
+  // 6-connection-per-host pool AND the backend's RF prediction queue.
+  async function runBatched(items, worker, batchSize = 6, onProgress) {
+    const results = [];
+    for (let i = 0; i < items.length; i += batchSize) {
+      const slice = items.slice(i, i + batchSize);
+      const batch = await Promise.all(slice.map(worker));
+      results.push(...batch);
+      if (onProgress) onProgress(Math.min(i + batchSize, items.length), items.length);
+    }
+    return results;
+  }
+
   async function loadAll(weather) {
+    console.log('[loadAll] start, weather =', weather);
     try {
       const [modelStats, circuity, routeList] = await Promise.all([
-        fetch('/stats/model').then(r => r.json()),
-        fetch('/stats/circuity').then(r => r.json()),
-        fetch('/routes?limit=200').then(r => r.json()),
+        fetch(`${API_BASE}/stats/model`).then(r => { if (!r.ok) throw new Error('stats/model '+r.status); return r.json(); }),
+        fetch(`${API_BASE}/stats/circuity`).then(r => { if (!r.ok) throw new Error('stats/circuity '+r.status); return r.json(); }),
+        fetch(`${API_BASE}/routes?limit=40`).then(r => { if (!r.ok) throw new Error('routes '+r.status); return r.json(); }),
       ]);
+      console.log('[loadAll] meta OK · routes:', routeList.length, '· sample:', routeList[0]);
+      if (!Array.isArray(routeList) || routeList.length === 0) {
+        throw new Error('Backend /routes returned empty list — is app.py running and did data_loader succeed?');
+      }
 
       window.LOGISTICS_DATA = {
         MODEL_STATS: {
@@ -1392,14 +1698,25 @@ function App() {
         CIRCUITY: circuity,
       };
 
-      const merged = await Promise.all(
-        routeList.map(async r => {
+      const merged = await runBatched(
+        routeList,
+        async r => {
           try { return await fetchAndMergeRoute(r.route_id, weather); }
           catch (e) { console.error('Route load failed:', r.route_id, e); return null; }
-        })
+        },
+        6,
+        (done, total) => {
+          setLoadProgress({ done, total });
+          console.log(`[loadAll] progress ${done}/${total}`);
+        }
       );
 
       const valid = merged.filter(Boolean);
+      console.log(`[loadAll] done — valid=${valid.length}/${routeList.length}`);
+      console.log('Routes Loaded:', valid);
+      if (valid.length === 0) {
+        throw new Error('All route fetches failed — check /optimize endpoint.');
+      }
       setRoutes(valid);
 
       const savedId  = localStorage.getItem('sivas-selected');
@@ -1408,7 +1725,8 @@ function App() {
       setSelectedId(newSelId);
       if (newSelId) localStorage.setItem('sivas-selected', newSelId);
     } catch (e) {
-      console.error('loadAll failed:', e);
+      console.error('[loadAll] FATAL:', e);
+      throw e;
     }
   }
 
@@ -1416,7 +1734,6 @@ function App() {
     setOptimizing(true);
     try {
       setRoutes(prev => {
-        // kick off async and update when done — capture prev in closure
         (async () => {
           const updated = await Promise.all(
             prev.map(async r => {
@@ -1427,7 +1744,7 @@ function App() {
           setRoutes(updated.filter(Boolean));
           setOptimizing(false);
         })();
-        return prev; // keep current routes visible while re-optimizing
+        return prev;
       });
     } catch {
       setOptimizing(false);
@@ -1447,21 +1764,24 @@ function App() {
     }
   }
 
-  // Initial load
   useEffect(() => {
     (async () => {
       setLoading(true);
-      await loadAll(tweaks.weather);
-      setLoading(false);
+      setLoadError(null);
+      try {
+        await loadAll(tweaks.weather);
+      } catch (e) {
+        setLoadError(String(e && e.message || e));
+      } finally {
+        setLoading(false);
+      }
     })();
-  }, []); // eslint-disable-line react-hooks/exhaustive-deps
+  }, []);
 
   const handleTweaksChange = (newTweaks) => {
     const weatherChanged = newTweaks.weather !== tweaks.weather;
     setTweaks(newTweaks);
-    if (weatherChanged && !loading) {
-      reOptimizeAll(newTweaks.weather);
-    }
+    if (weatherChanged && !loading) reOptimizeAll(newTweaks.weather);
   };
 
   const handleSelectRoute = (id) => {
@@ -1469,24 +1789,55 @@ function App() {
     localStorage.setItem('sivas-selected', id);
   };
 
-  const selected      = routes.find(r => r.route_id === selectedId) || routes[0];
-  const criticalCount = routes.filter(r => r.severity === 'critical').length;
+  const selected      = (routes || []).find(r => r.route_id === selectedId) || (routes && routes[0]) || null;
+  const criticalCount = (routes || []).filter(r => r && r.severity === 'critical').length;
+
+  console.log('[App] render · routes:', routes.length, '· selected:', selected && selected.route_id, '· critical:', criticalCount);
+  if (routes.length > 0 && !selected) {
+    console.warn('[App] routes loaded but no selected — routes[0]:', routes[0]);
+  }
 
   if (loading) {
+    const pct = loadProgress.total > 0 ? (loadProgress.done / loadProgress.total) * 100 : 0;
     return (
       <div style={{
         display: 'flex', alignItems: 'center', justifyContent: 'center',
-        height: '100vh', background: 'var(--bg-0)', color: 'var(--text-2)',
+        height: '100vh', background: '#0B1120', color: 'var(--text-2)',
         fontFamily: 'var(--font-mono)', fontSize: 14, flexDirection: 'column', gap: 16,
       }}>
-        <div style={{ color: 'var(--cyan)', fontSize: 22, fontWeight: 600, letterSpacing: '-0.02em' }}>LOJİSTİK KOMUTA</div>
-        <div style={{ color: 'var(--text-3)' }}>Rotalar yükleniyor ve optimize ediliyor…</div>
+        <div style={{ color: 'var(--cyan)', fontSize: 22, fontWeight: 600, letterSpacing: '-0.02em',
+          textShadow: '0 0 20px var(--cyan-glow)' }}>LOJİSTİK KOMUTA</div>
+        <div style={{ color: 'var(--text-3)' }}>
+          {loadProgress.total > 0
+            ? `Rotalar optimize ediliyor… ${loadProgress.done}/${loadProgress.total}`
+            : 'Model yükleniyor…'}
+        </div>
+        <div style={{ width: 280, height: 3, background: 'var(--bg-3)', borderRadius: 2, overflow: 'hidden' }}>
+          <div style={{ width: `${pct}%`, height: '100%', background: 'var(--cyan)',
+            boxShadow: '0 0 8px var(--cyan-glow)', transition: 'width 0.3s' }} />
+        </div>
         <div style={{ display: 'flex', gap: 6, marginTop: 4 }}>
           {[0,1,2].map(i => (
             <div key={i} style={{ width: 7, height: 7, borderRadius: '50%', background: 'var(--cyan)',
               opacity: 0.3 + i * 0.35, animation: `pulse ${1 + i * 0.3}s infinite` }} />
           ))}
         </div>
+      </div>
+    );
+  }
+
+  if (loadError) {
+    return (
+      <div style={{
+        display: 'flex', alignItems: 'center', justifyContent: 'center',
+        height: '100vh', background: '#0B1120', color: 'var(--red)',
+        fontFamily: 'var(--font-mono)', fontSize: 14, flexDirection: 'column', gap: 12, padding: 40, textAlign: 'center'
+      }}>
+        <div style={{ fontSize: 20, fontWeight: 600 }}>BAĞLANTI HATASI</div>
+        <div style={{ color: 'var(--text-2)' }}>{loadError}</div>
+        <div style={{ color: 'var(--text-3)', fontSize: 12 }}>Konsolu (F12) kontrol edin.</div>
+        <button className="btn btn-primary" style={{ marginTop: 16, maxWidth: 200 }}
+          onClick={() => window.location.reload()}>Yeniden Dene</button>
       </div>
     );
   }
@@ -1504,39 +1855,52 @@ function App() {
       <div className={`main ${tweaks.layout === 'focus' ? 'wide-map' : ''}`}>
         {/* LEFT — Fleet list + Alerts */}
         <div className="pane">
-          <FleetList
-            routes={routes}
-            selectedId={selectedId}
-            onSelect={handleSelectRoute}
-            filter={filter}
-            onFilter={setFilter}
-          />
-          <AlertsStrip routes={routes} onSelect={handleSelectRoute} />
+          <ErrorBoundary label="FleetList" minimal>
+            <FleetList
+              routes={routes}
+              selectedId={selectedId}
+              onSelect={handleSelectRoute}
+              filter={filter}
+              onFilter={setFilter}
+            />
+          </ErrorBoundary>
+          <ErrorBoundary label="AlertsStrip" minimal>
+            <AlertsStrip routes={routes} onSelect={handleSelectRoute} />
+          </ErrorBoundary>
         </div>
 
-        {/* CENTER — KPI strip + Map */}
-        <div className="pane">
-          <KpiStrip routes={routes} />
-          <div style={{ flex: 1, minHeight: 0 }}>
-            <MapView
-              route={selected}
-              allRoutes={routes}
-              weatherVisible={true}
-              weatherScenario={tweaks.weather}
-              routeMode={routeMode}
-              onRouteMode={setRouteMode}
-            />
+        {/* CENTER — KPI strip + Map + Efficiency Widget */}
+        <div className="pane" style={{ position: 'relative' }}>
+          <ErrorBoundary label="KpiStrip" minimal>
+            <KpiStrip routes={routes} />
+          </ErrorBoundary>
+          <div style={{ flex: 1, minHeight: 0, position: 'relative' }}>
+            <ErrorBoundary label="MapView" minimal>
+              <MapView
+                route={selected}
+                allRoutes={routes}
+                weatherVisible={true}
+                weatherScenario={tweaks.weather}
+                routeMode={routeMode}
+                onRouteMode={setRouteMode}
+              />
+            </ErrorBoundary>
+            <ErrorBoundary label="EfficiencyWidget" minimal>
+              <EfficiencyGainWidget routes={routes} />
+            </ErrorBoundary>
           </div>
         </div>
 
         {/* RIGHT — Detail pane */}
         <div className="pane">
-          <DetailPane
-            route={selected}
-            onApply={() => setApplied({ ...applied, [selectedId]: true })}
-            applied={applied[selectedId]}
-            onReOptimize={reOptimizeSelected}
-          />
+          <ErrorBoundary label="DetailPane" minimal>
+            <DetailPane
+              route={selected}
+              onApply={() => setApplied({ ...applied, [selectedId]: true })}
+              applied={applied[selectedId]}
+              onReOptimize={reOptimizeSelected}
+            />
+          </ErrorBoundary>
         </div>
       </div>
 
@@ -1552,7 +1916,11 @@ function App() {
   );
 }
 
-ReactDOM.createRoot(document.getElementById('root')).render(<App />);
+ReactDOM.createRoot(document.getElementById('root')).render(
+  <ErrorBoundary label="App">
+    <App />
+  </ErrorBoundary>
+);
 </script>
 </body>
 </html>
