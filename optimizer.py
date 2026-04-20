@@ -147,9 +147,10 @@ def simulate_route(
         # --- Dinamik koşulları çek ---
         dynamic = _dynamic_conditions(lat, lon, road_type, current_time, weather_df, traffic_df)
 
-        # Congestion ratio seyahat süresini etkiler:
-        # congestion 0.0 → normal hız, 1.0 → tam tıkanıklık
-        congestion_penalty = 1.0 + dynamic["congestion_ratio"]
+        # Congestion dampened: 0.35 katsayısıyla yumuşatıldı.
+        # Eski: 1 + ratio → çift gecikme olabiliyordu.
+        # Yeni: en fazla %35 seyahat süresi artışı (ratio=1 → ×1.35).
+        congestion_penalty = 1.0 + dynamic["congestion_ratio"] * 0.35
 
         if idx == 0:
             travel_min = float(stop["planned_travel_min"]) * delay_factor * congestion_penalty
@@ -225,20 +226,26 @@ def optimize_stop_order(
             eta = current_time + timedelta(minutes=base_travel)
             dyn = _dynamic_conditions(lat, lon, road_type, eta, weather_df, traffic_df)
 
-            congestion_penalty = 1.0 + dyn["congestion_ratio"]
+            # Congestion dampened (aynı simülasyon mantığı)
+            congestion_penalty = 1.0 + dyn["congestion_ratio"] * 0.35
             travel = base_travel * congestion_penalty
 
             window_close = pd.Timestamp(row["time_window_close"])
             minutes_until_close = (window_close - current_time).total_seconds() / 60.0
 
             if minutes_until_close < travel:
-                # Pencere kaçacak — geç kalma miktarıyla orantılı ceza
-                penalty = 1000.0 + (travel - minutes_until_close) * 2.0
+                # Pencere kesinlikle kaçacak — dengeli ceza
+                overrun = travel - minutes_until_close
+                penalty = 2000.0 + overrun * 8.0
+            elif minutes_until_close < travel * 1.20:
+                # Koruma bölgesi — sıkışık pencere
+                margin_pct = (minutes_until_close - travel) / (travel * 0.20)
+                penalty = 300.0 * (1.0 - margin_pct)
             else:
                 penalty = 0.0
 
-            # Penceresi en yakın kapanan durak öncelikli
-            urgency_bonus = max(0.0, 500.0 - minutes_until_close) * 0.1
+            # Aciliyet bonusu — 120 dakikaya kadar üstel
+            urgency_bonus = 900.0 / max(1.0, minutes_until_close) if minutes_until_close < 120 else 0.0
 
             score = travel + penalty - urgency_bonus
             if score < best_score:

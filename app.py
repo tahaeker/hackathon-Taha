@@ -74,6 +74,18 @@ INDEX_FILE = STATIC_DIR / "index.html"
 app.mount("/static", StaticFiles(directory=str(STATIC_DIR)), name="static")
 
 
+@app.get("/favicon.ico", include_in_schema=False)
+def favicon():
+    """Tarayıcının favicon 404 hatasını önle."""
+    from fastapi.responses import Response
+    # 1×1 şeffaf PNG (base64)
+    import base64
+    png = base64.b64decode(
+        "iVBORw0KGgoAAAANSUhEUgAAAAEAAAABCAYAAAAfFcSJAAAADUlEQVR42mNk+M9QDwADhgGAWjR9awAAAABJRU5ErkJggg=="
+    )
+    return Response(content=png, media_type="image/png")
+
+
 @app.get("/", response_class=HTMLResponse, tags=["Meta"])
 def root():
     """Komuta Merkezi — ana arayüz."""
@@ -120,7 +132,10 @@ def _compute_delay_factor(route_info: dict, predicted_delay_min: float) -> float
     planned = float(route_info.get("planned_duration_min", 1))
     if planned <= 0:
         return 1.0
-    return max(1.0, (planned + predicted_delay_min) / planned)
+    # Üst sınır 1.45 — fazla kötümserliği önler.
+    # delay_factor * congestion_penalty bileşik etkisini dengede tutar.
+    raw = (planned + predicted_delay_min) / planned
+    return min(max(1.0, raw), 1.45)
 
 
 # ---------------------------------------------------------------------------

@@ -10,28 +10,28 @@
 <link rel="stylesheet" href="https://unpkg.com/leaflet@1.9.4/dist/leaflet.css"/>
 <style>
 :root {
-  --bg-0: #0B1120;
-  --bg-1: #0e1628;
-  --bg-2: #131e30;
-  --bg-3: #192638;
-  --bg-4: #1f2f44;
-  --line-soft: rgba(148, 178, 214, 0.07);
-  --line: rgba(148, 178, 214, 0.13);
-  --line-strong: rgba(148, 178, 214, 0.24);
-  --text-0: #e8f0fa;
-  --text-1: #b8c7d9;
-  --text-2: #7d8ea3;
-  --text-3: #506179;
-  --cyan: #5dd6e6;
-  --cyan-soft: rgba(93, 214, 230, 0.12);
-  --cyan-glow: rgba(93, 214, 230, 0.35);
-  --amber: #f5b945;
-  --amber-soft: rgba(245, 185, 69, 0.14);
-  --red: #ff6b6b;
-  --red-soft: rgba(255, 107, 107, 0.14);
-  --lime: #8ee68a;
-  --lime-soft: rgba(142, 230, 138, 0.12);
-  --violet: #a78bfa;
+  --bg-0: #f2f5fa;
+  --bg-1: #e8edf6;
+  --bg-2: #ffffff;
+  --bg-3: #dde4ef;
+  --bg-4: #c8d4e8;
+  --line-soft: rgba(26, 46, 90, 0.05);
+  --line: rgba(26, 46, 90, 0.10);
+  --line-strong: rgba(26, 46, 90, 0.20);
+  --text-0: #0f1e3c;
+  --text-1: #1e3a6e;
+  --text-2: #4a6285;
+  --text-3: #7a95b5;
+  --cyan: #0891b2;
+  --cyan-soft: rgba(8, 145, 178, 0.10);
+  --cyan-glow: rgba(8, 145, 178, 0.30);
+  --amber: #d97706;
+  --amber-soft: rgba(217, 119, 6, 0.12);
+  --red: #dc2626;
+  --red-soft: rgba(220, 38, 38, 0.10);
+  --lime: #16a34a;
+  --lime-soft: rgba(22, 163, 74, 0.10);
+  --violet: #7c3aed;
   --font-ui: 'Inter Tight', 'Inter', -apple-system, BlinkMacSystemFont, sans-serif;
   --font-mono: 'JetBrains Mono', 'SF Mono', 'Menlo', 'Consolas', monospace;
   --fs-xs: 10px; --fs-sm: 11px; --fs-md: 13px; --fs-lg: 15px;
@@ -539,6 +539,295 @@ button:focus-visible { outline: 1px solid var(--cyan); outline-offset: 2px; }
 .kpi-strip .kpi .trend { font-family: var(--font-mono); font-size: var(--fs-xs); color: var(--lime); margin-top: 2px; }
 .kpi-strip .kpi .trend.down { color: var(--red); }
 .spark { display: inline-block; vertical-align: middle; }
+
+/* ══════════════════════════════════════════════════════
+   ENTERPRISE LIGHT THEME — hardcoded dark color overrides
+   ══════════════════════════════════════════════════════ */
+html, body { background: var(--bg-0); color: var(--text-1); }
+.app {
+  background:
+    radial-gradient(ellipse 80% 50% at 50% 0%, rgba(8,145,178,0.05), transparent 55%),
+    var(--bg-0);
+}
+.topbar {
+  background: rgba(255,255,255,0.97) !important;
+  border-bottom: 1px solid var(--line) !important;
+  box-shadow: 0 1px 0 rgba(255,255,255,0.8), 0 2px 8px rgba(26,46,90,0.06);
+}
+.topbar .brand { color: var(--text-0); }
+.topbar nav button.active { color: var(--text-0); background: rgba(8,145,178,0.10); }
+.topbar nav button:hover:not(.active) { color: var(--text-1); background: rgba(26,46,90,0.05); }
+.topbar .chip { background: var(--bg-1); border-color: var(--line); }
+.topbar .chip .dot { box-shadow: 0 0 5px currentColor; }
+.pane {
+  background: linear-gradient(180deg, rgba(255,255,255,0.88), rgba(240,244,250,0.96)) !important;
+  box-shadow: inset 1px 0 0 rgba(255,255,255,0.9);
+}
+.glass {
+  background: rgba(255,255,255,0.82) !important;
+  border: 1px solid rgba(26,46,90,0.09) !important;
+  box-shadow: 0 2px 12px -4px rgba(26,46,90,0.10), 0 1px 0 rgba(255,255,255,0.9) inset !important;
+}
+.pane-header { border-bottom-color: var(--line); }
+.pane-body::-webkit-scrollbar-thumb { background: var(--bg-4); }
+.route-card:hover { background: rgba(8,145,178,0.04); }
+.route-card.selected { background: rgba(8,145,178,0.07); }
+.route-card.selected::before { background: var(--cyan); box-shadow: 0 0 8px rgba(8,145,178,0.4); }
+.route-card .route-id { color: var(--text-0); }
+.route-card .progress { background: var(--bg-3); }
+.filters .f { background: var(--bg-1); border-color: var(--line); color: var(--text-2); }
+.filters .f:hover { background: var(--bg-2); border-color: var(--line-strong); color: var(--text-1); }
+.divider { background: var(--line); }
+.divider-soft { background: var(--line-soft); }
+
+/* 3D comparison cards */
+.comparison .col {
+  background: rgba(255,255,255,0.95) !important;
+  border-color: rgba(26,46,90,0.10) !important;
+  box-shadow: 0 1px 0 rgba(255,255,255,1) inset, 0 8px 24px -8px rgba(26,46,90,0.14) !important;
+}
+.comparison .col.optimized {
+  background: linear-gradient(145deg, rgba(8,145,178,0.08) 0%, rgba(255,255,255,0.95) 55%) !important;
+  border-color: rgba(8,145,178,0.30) !important;
+  box-shadow: 0 1px 0 rgba(255,255,255,1) inset, 0 0 0 1px rgba(8,145,178,0.12) inset,
+    0 8px 28px -8px rgba(8,145,178,0.22), 0 0 20px -6px rgba(8,145,178,0.15) !important;
+}
+.comparison .col.optimized .big { color: var(--cyan); text-shadow: 0 0 16px rgba(8,145,178,0.25); }
+.comparison .col:hover {
+  box-shadow: 0 1px 0 rgba(255,255,255,1) inset, 0 16px 36px -10px rgba(26,46,90,0.18) !important;
+}
+.delta-banner { background: rgba(22,163,74,0.06); border-color: rgba(22,163,74,0.22); }
+.btn-ghost { background: rgba(255,255,255,0.85); border-color: rgba(26,46,90,0.18); color: var(--text-1); }
+.btn-ghost:hover { background: rgba(255,255,255,0.98); border-color: rgba(26,46,90,0.30); color: var(--text-0); }
+.actions { border-bottom-color: var(--line); }
+.detail-head { border-bottom-color: var(--line); }
+
+/* Badges on light bg */
+.badge.critical { background: rgba(220,38,38,0.10); color: #b91c1c; }
+.badge.warning  { background: rgba(217,119,6,0.11); color: #b45309; }
+.badge.ok       { background: rgba(22,163,74,0.10); color: #15803d; }
+.badge.info     { background: rgba(8,145,178,0.10); color: #0369a1; }
+.badge.muted    { background: var(--bg-3); color: var(--text-2); }
+
+/* KPI strip */
+.kpi-strip { background: rgba(26,46,90,0.08); }
+.kpi-strip .kpi { background: rgba(255,255,255,0.92); }
+
+/* Alerts */
+.alert-item:hover { background: rgba(8,145,178,0.04); }
+.alert-item.critical .pin { box-shadow: 0 0 5px rgba(220,38,38,0.5); }
+
+/* Map sphere — enterprise light */
+.map-sphere-stage {
+  background:
+    radial-gradient(ellipse 70% 50% at 50% 50%, rgba(8,145,178,0.07), transparent 70%),
+    radial-gradient(ellipse 40% 30% at 20% 80%, rgba(124,58,237,0.04), transparent 70%),
+    #e4eaf5 !important;
+}
+.map-sphere-container { transform: perspective(1400px) rotateY(2deg); }
+.map-sphere {
+  box-shadow:
+    inset 0 0 50px rgba(8,145,178,0.18),
+    inset 0 0 120px rgba(8,145,178,0.08),
+    inset 0 0 0 2px rgba(8,145,178,0.40),
+    0 0 0 1px rgba(8,145,178,0.14),
+    0 0 60px rgba(8,145,178,0.14),
+    0 16px 60px rgba(26,46,90,0.22) !important;
+}
+.map-el { background: #d4dce8 !important; }
+.leaflet-container { background: #d4dce8 !important; font-family: var(--font-ui) !important; }
+.leaflet-tile-pane { filter: none !important; }
+.map-hud-ring { border-color: rgba(8,145,178,0.22) !important; }
+.map-hud-ring.r2 { border-color: rgba(8,145,178,0.14) !important; }
+.map-hud-ring.r3 { border-color: rgba(8,145,178,0.08) !important; }
+.map-hud-ring.r4 { border-color: rgba(8,145,178,0.05) !important; }
+.map-cardinal { color: var(--cyan) !important; text-shadow: 0 0 8px rgba(8,145,178,0.4) !important; }
+.map-hud-grid {
+  background-image:
+    linear-gradient(rgba(8,145,178,0.07) 1px, transparent 1px),
+    linear-gradient(90deg, rgba(8,145,178,0.07) 1px, transparent 1px) !important;
+}
+.map-scan-line {
+  background: linear-gradient(90deg, transparent, rgba(8,145,178,0.35), transparent) !important;
+}
+
+/* Map overlay controls */
+.map-btn {
+  background: rgba(255,255,255,0.90) !important;
+  border: 1px solid rgba(26,46,90,0.14) !important;
+  color: var(--text-1) !important;
+  box-shadow: 0 2px 8px rgba(26,46,90,0.10), 0 1px 0 rgba(255,255,255,0.95) inset !important;
+}
+.map-btn:hover {
+  background: rgba(255,255,255,1) !important;
+  border-color: rgba(8,145,178,0.45) !important;
+  color: var(--cyan) !important;
+}
+.map-btn.active {
+  background: rgba(8,145,178,0.12) !important;
+  border-color: var(--cyan) !important;
+  color: var(--cyan) !important;
+}
+.map-layer-toggle {
+  background: rgba(255,255,255,0.90) !important;
+  border: 1px solid rgba(26,46,90,0.12) !important;
+  box-shadow: 0 2px 8px rgba(26,46,90,0.08) !important;
+}
+.map-legend {
+  background: rgba(255,255,255,0.93) !important;
+  border: 1px solid rgba(26,46,90,0.10) !important;
+  box-shadow: 0 4px 16px rgba(26,46,90,0.10) !important;
+}
+.map-legend .title { color: var(--text-3); }
+.map-legend .li { color: var(--text-1); }
+.map-hud {
+  background: rgba(255,255,255,0.90) !important;
+  border: 1px solid rgba(26,46,90,0.12) !important;
+  box-shadow: 0 2px 8px rgba(26,46,90,0.08) !important;
+}
+.map-hud .k { color: var(--text-3) !important; }
+.map-hud .v { color: var(--text-0) !important; }
+.map-coords {
+  background: rgba(255,255,255,0.88) !important;
+  border: 1px solid rgba(26,46,90,0.10) !important;
+  color: var(--text-3) !important;
+}
+.map-tooltip {
+  background: rgba(255,255,255,0.98) !important;
+  border: 1px solid rgba(26,46,90,0.14) !important;
+  box-shadow: 0 8px 24px rgba(26,46,90,0.14) !important;
+  color: var(--text-1) !important;
+}
+.map-tooltip .tt-title { color: var(--text-0) !important; }
+.map-tooltip .tt-row .k { color: var(--text-3) !important; }
+.map-tooltip .tt-row .v { color: var(--text-1) !important; }
+
+/* Efficiency widget */
+.efficiency-widget {
+  background: linear-gradient(135deg, rgba(8,145,178,0.12) 0%, rgba(255,255,255,0.92) 60%) !important;
+  border: 1px solid rgba(8,145,178,0.30) !important;
+  box-shadow: 0 0 0 1px rgba(8,145,178,0.08) inset, 0 0 20px -4px rgba(8,145,178,0.20), 0 8px 20px -6px rgba(26,46,90,0.14) !important;
+}
+
+/* Leaflet stop markers */
+.lf-stop-pin.ok  { background: rgba(255,255,255,0.96) !important; }
+.lf-stop-pin.miss { background: rgba(255,255,255,0.96) !important; }
+.lf-stop-badge {
+  background: rgba(255,255,255,0.96) !important;
+  border-color: rgba(26,46,90,0.16) !important;
+  color: var(--text-1) !important;
+}
+.lf-depot-marker {
+  background: var(--cyan) !important;
+  box-shadow: 0 0 12px rgba(8,145,178,0.55), 0 0 24px rgba(8,145,178,0.25) !important;
+}
+.leaflet-tooltip.lf-tip {
+  background: rgba(255,255,255,0.97) !important;
+  color: var(--text-1) !important;
+  border: 1px solid rgba(26,46,90,0.14) !important;
+  box-shadow: 0 8px 20px rgba(26,46,90,0.12) !important;
+}
+
+/* Tweaks panel */
+.tweaks-panel {
+  background: rgba(255,255,255,0.98) !important;
+  border: 1px solid rgba(26,46,90,0.14) !important;
+  box-shadow: 0 20px 48px rgba(26,46,90,0.15) !important;
+}
+.tweaks-panel .tp-head { background: var(--bg-1); border-bottom-color: var(--line); }
+.tp-seg { background: var(--bg-1); border-color: var(--line); }
+.tp-seg button.active { background: var(--bg-2); color: var(--text-0); }
+
+/* Footer */
+.footer {
+  background: rgba(255,255,255,0.97) !important;
+  border-top: 1px solid var(--line) !important;
+}
+
+/* Model card */
+.model-card { border-top-color: var(--line); }
+.feat-bar .fb { background: var(--bg-3); }
+
+/* Gantt */
+.gantt-row .track { background: var(--bg-3); }
+.gantt-row:hover { background: rgba(8,145,178,0.04); }
+
+/* ── COLLAPSIBLE PANEL TRANSITIONS ── */
+.main { transition: grid-template-columns 0.28s cubic-bezier(0.4,0,0.2,1) !important; }
+.pane { transition: opacity 0.2s ease; }
+.pane.collapsed { opacity: 0; pointer-events: none; }
+
+/* Panel edge toggle button */
+.pane-toggle-btn {
+  position: absolute; top: 50%; z-index: 700;
+  width: 18px; height: 44px;
+  display: flex; align-items: center; justify-content: center;
+  background: rgba(255,255,255,0.94);
+  border: 1px solid rgba(26,46,90,0.14);
+  box-shadow: 0 2px 8px rgba(26,46,90,0.10);
+  cursor: pointer; font-size: 12px; color: var(--text-3);
+  line-height: 1; transition: all 0.15s; border-radius: 0;
+  transform: translateY(-50%);
+}
+.pane-toggle-btn:hover { color: var(--cyan); border-color: var(--cyan); background: #fff; }
+.pane-toggle-btn.left-toggle  { right: -9px; border-radius: 0 5px 5px 0; border-left: 0; }
+.pane-toggle-btn.right-toggle { left:  -9px; border-radius: 5px 0 0 5px; border-right: 0; }
+
+/* ── MAP SETTINGS POPUP ── */
+.map-settings-popup {
+  position: absolute; top: 10px; left: 44px; z-index: 560;
+  background: rgba(255,255,255,0.97);
+  border: 1px solid rgba(26,46,90,0.12);
+  border-radius: var(--radius-lg);
+  box-shadow: 0 8px 28px rgba(26,46,90,0.14), 0 1px 0 rgba(255,255,255,0.9) inset;
+  padding: 10px 14px; min-width: 210px;
+  animation: fadeIn 0.14s ease both;
+}
+.map-settings-popup .sp-head {
+  font-size: var(--fs-xs); color: var(--text-3);
+  text-transform: uppercase; letter-spacing: 0.08em;
+  margin-bottom: 8px; padding-bottom: 6px;
+  border-bottom: 1px solid var(--line);
+}
+.sp-row { display: flex; align-items: center; justify-content: space-between;
+  padding: 4px 0; font-size: var(--fs-sm); color: var(--text-2); }
+.sp-pills { display: flex; background: var(--bg-1); border-radius: 4px;
+  padding: 2px; border: 1px solid var(--line); gap: 2px; }
+.sp-pills button { padding: 3px 9px; border-radius: 3px;
+  font-size: 10px; font-family: var(--font-mono);
+  color: var(--text-3); transition: all 0.12s; }
+.sp-pills button.active {
+  background: var(--bg-2); color: var(--text-0);
+  box-shadow: 0 1px 4px rgba(26,46,90,0.10); }
+
+/* ── FLAT PROJECTION MODE ── */
+.map-sphere-stage.proj-flat .map-sphere-container {
+  transform: none !important;
+  width: 98% !important; height: calc(100% - 16px) !important;
+  aspect-ratio: unset !important; max-width: unset !important;
+  border-radius: var(--radius-lg);
+}
+.map-sphere-stage.proj-flat .map-sphere {
+  border-radius: var(--radius-lg) !important;
+  box-shadow: 0 4px 24px rgba(26,46,90,0.12), 0 0 0 1px rgba(26,46,90,0.08) !important;
+}
+.map-sphere-stage.proj-flat .map-hud-ring,
+.map-sphere-stage.proj-flat .map-cardinal,
+.map-sphere-stage.proj-flat .map-orbital-text,
+.map-sphere-stage.proj-flat .map-sphere-ticks { display: none !important; }
+.map-sphere-stage.proj-flat .map-fisheye,
+.map-sphere-stage.proj-flat .map-sheen { display: none !important; }
+.map-sphere-stage.proj-flat .map-sphere-container:hover { transform: none !important; }
+
+/* ── EFFICIENCY WIDGET — moved to bottom-center to avoid TR overlap ── */
+.efficiency-widget {
+  position: absolute !important;
+  bottom: 56px !important; top: auto !important;
+  left: 50% !important; right: auto !important;
+  transform: translateX(-50%) !important;
+  min-width: 200px;
+  z-index: 550;
+}
 </style>
 </head>
 <body>
@@ -584,7 +873,7 @@ class ErrorBoundary extends Component {
       return (
         <div style={{
           display: 'flex', alignItems: 'center', justifyContent: 'center',
-          height: '100vh', background: '#0B1120', color: 'var(--red)',
+          height: '100vh', background: 'var(--bg-0)', color: 'var(--red)',
           fontFamily: 'var(--font-mono)', fontSize: 14, flexDirection: 'column', gap: 12, padding: 40, textAlign: 'center'
         }}>
           <div style={{ fontSize: 20, fontWeight: 600 }}>RENDER HATASI</div>
@@ -733,83 +1022,131 @@ function EfficiencyGainWidget({ routes }) {
 const SIVAS_CENTER = [39.7477, 37.0179];
 const SIVAS_BOUNDS = [[39.18, 36.82], [39.82, 37.42]];
 
-function MapView({ route, allRoutes, weatherVisible, weatherScenario, routeMode, onRouteMode }) {
-  const mapElRef    = useRef(null);
-  const leafletRef  = useRef(null);
-  const markersRef  = useRef([]);
-  const polyRef     = useRef([]);
-  const [hoveredStop, setHoveredStop] = useState(null);
-  const [mousePos, setMousePos]       = useState({ x: 0, y: 0 });
+// Quadratic bezier arc — düz çizgi yerine taktiksel kavisli hat
+function bezierArc(lat1, lon1, lat2, lon2, curvature = 0.18, steps = 20) {
+  const dlat = lat2 - lat1, dlon = lon2 - lon1;
+  const cx = (lat1 + lat2) / 2 - dlon * curvature;
+  const cy = (lon1 + lon2) / 2 + dlat * curvature;
+  const pts = [];
+  for (let i = 0; i <= steps; i++) {
+    const t = i / steps;
+    pts.push([
+      (1-t)*(1-t)*lat1 + 2*(1-t)*t*cx + t*t*lat2,
+      (1-t)*(1-t)*lon1 + 2*(1-t)*t*cy + t*t*lon2,
+    ]);
+  }
+  return pts;
+}
+function makeArcPath(latLngs) {
+  if (latLngs.length < 2) return latLngs;
+  const out = [];
+  for (let i = 0; i < latLngs.length - 1; i++) {
+    const seg = bezierArc(latLngs[i][0], latLngs[i][1], latLngs[i+1][0], latLngs[i+1][1]);
+    out.push(...(i === 0 ? seg : seg.slice(1)));
+  }
+  return out;
+}
+// Çakışan marker'ları küçük spiral offset ile ayır
+function offsetOverlaps(stops) {
+  const GRID = 0.004, D = 0.0028;
+  const seen = {};
+  return stops.map(s => {
+    const key = `${(s.latitude/GRID).toFixed(0)},${(s.longitude/GRID).toFixed(0)}`;
+    const n = seen[key] ?? 0;
+    seen[key] = n + 1;
+    const angle = n * (Math.PI * 2 / 6);
+    const dist  = n === 0 ? 0 : D;
+    return { ...s, _lat: s.latitude + dist * Math.cos(angle), _lon: s.longitude + dist * Math.sin(angle) };
+  });
+}
+
+function MapView({ route, allRoutes, weatherVisible, weatherScenario, routeMode, onRouteMode,
+                   mapStyle, onMapStyle, projectionMode, onProjectionMode }) {
+  const mapElRef      = useRef(null);
+  const leafletRef    = useRef(null);
+  const tileLayerRef  = useRef(null);
+  const labelLayerRef = useRef(null);
+  const markersRef    = useRef([]);
+  const polyRef       = useRef([]);
+  const [mapReady, setMapReady]             = useState(false);
+  const [settingsOpen, setSettingsOpen]     = useState(false);
+  const [hoveredStop, setHoveredStop]       = useState(null);
+  const [mousePos,    setMousePos]          = useState({ x: 0, y: 0 });
   const wrapRef = useRef(null);
 
-  // Init Leaflet — wait until container is measurable
+  // ── 1. MAP INIT (tile-layer free) ────────────────────────────
   useEffect(() => {
     if (leafletRef.current || !mapElRef.current) return;
-    if (typeof L === 'undefined') {
-      console.error('[MapView] Leaflet (L) not loaded — check CDN');
-      return;
-    }
-
+    if (typeof L === 'undefined') { console.error('[MapView] Leaflet not loaded'); return; }
     let cancelled = false;
-
     const tryInit = (attempt = 0) => {
       if (cancelled || leafletRef.current) return;
       const el = mapElRef.current;
       if (!el) return;
       const rect = el.getBoundingClientRect();
-      console.log(`[MapView] init attempt ${attempt} · container ${rect.width.toFixed(0)}×${rect.height.toFixed(0)}`);
-
       if ((rect.width < 50 || rect.height < 50) && attempt < 20) {
-        setTimeout(() => tryInit(attempt + 1), 120);
-        return;
+        setTimeout(() => tryInit(attempt + 1), 120); return;
       }
-
       try {
         const map = L.map(el, {
           center: SIVAS_CENTER, zoom: 10,
           zoomControl: false, attributionControl: false,
           preferCanvas: false,
         });
-
-        // Primary: CartoDB Dark Matter — reliable CORS, dark theme, no API key
-        const primaryLayer = L.tileLayer(
-          'https://{s}.basemaps.cartocdn.com/dark_all/{z}/{x}/{y}.png',
-          { maxZoom: 19, subdomains: 'abcd' }
-        );
-        primaryLayer.on('tileload',  () => console.log('[tiles] ✓ CartoDB tile loaded'));
-        primaryLayer.on('tileerror', e => console.warn('[tiles] ✗ CartoDB tile FAILED', e && e.tile && e.tile.src));
-        primaryLayer.addTo(map);
-
-        // Fallback: if CartoDB fails within 5s, switch to OpenStreetMap
-        let primaryOk = false;
-        primaryLayer.once('tileload', () => { primaryOk = true; });
-        setTimeout(() => {
-          if (!primaryOk && leafletRef.current) {
-            console.warn('[tiles] CartoDB did not respond in 5s — falling back to OpenStreetMap');
-            map.removeLayer(primaryLayer);
-            L.tileLayer('https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png', {
-              maxZoom: 19, subdomains: 'abc'
-            }).addTo(map);
-          }
-        }, 5000);
-
         leafletRef.current = map;
-        console.log('[MapView] Leaflet ready');
-
-        // Multiple invalidateSize calls to cover layout thrash
+        setMapReady(true);
+        console.log('[MapView] map ready');
         [50, 200, 500, 1000].forEach(ms => setTimeout(() => {
-          if (!cancelled && leafletRef.current) {
-            leafletRef.current.invalidateSize();
-          }
+          if (!cancelled && leafletRef.current) leafletRef.current.invalidateSize();
         }, ms));
-      } catch (e) {
-        console.error('[MapView] Leaflet init failed:', e);
-      }
+      } catch (e) { console.error('[MapView] init failed:', e); }
     };
-
     tryInit(0);
     return () => { cancelled = true; };
   }, []);
+
+  // ── 2. TILE LAYER — switches on mapStyle or first ready ──────
+  useEffect(() => {
+    const map = leafletRef.current;
+    if (!mapReady || !map) return;
+    // Tear down old layers
+    if (tileLayerRef.current)  { try { map.removeLayer(tileLayerRef.current);  } catch(e){} tileLayerRef.current  = null; }
+    if (labelLayerRef.current) { try { map.removeLayer(labelLayerRef.current); } catch(e){} labelLayerRef.current = null; }
+
+    if (mapStyle === 'satellite') {
+      const sat = L.tileLayer(
+        'https://server.arcgisonline.com/ArcGIS/rest/services/World_Imagery/MapServer/tile/{z}/{y}/{x}',
+        { maxZoom: 19, tileSize: 256 }
+      );
+      sat.on('tileload',  () => console.log('[tiles] ✓ Esri sat'));
+      sat.on('tileerror', e  => console.warn('[tiles] ✗ Esri sat', e?.tile?.src));
+      sat.addTo(map);
+      tileLayerRef.current = sat;
+      const lbl = L.tileLayer(
+        'https://server.arcgisonline.com/ArcGIS/rest/services/Reference/World_Boundaries_and_Places/MapServer/tile/{z}/{y}/{x}',
+        { maxZoom: 19, opacity: 0.65 }
+      ).addTo(map);
+      labelLayerRef.current = lbl;
+      // OSM fallback if Esri silent after 6s
+      let ok = false;
+      sat.once('tileload', () => { ok = true; });
+      setTimeout(() => {
+        if (!ok && leafletRef.current) {
+          console.warn('[tiles] Esri 6s timeout → OSM fallback');
+          try { map.removeLayer(sat); map.removeLayer(lbl); } catch(e){}
+          tileLayerRef.current  = L.tileLayer('https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png', { maxZoom: 19, subdomains: 'abc' }).addTo(map);
+          labelLayerRef.current = null;
+        }
+      }, 6000);
+    } else {
+      // Flat / light style — CartoDB Light All
+      tileLayerRef.current = L.tileLayer(
+        'https://{s}.basemaps.cartocdn.com/light_all/{z}/{x}/{y}.png',
+        { maxZoom: 19, subdomains: 'abcd' }
+      ).addTo(map);
+      console.log('[tiles] CartoDB Light');
+    }
+  }, [mapStyle, mapReady]);
 
   // Force invalidateSize whenever route changes (layout may have shifted)
   useEffect(() => {
@@ -849,30 +1186,41 @@ function MapView({ route, allRoutes, weatherVisible, weatherScenario, routeMode,
       .map(s => [s.latitude, s.longitude]);
 
     if (routeMode === 'both' || routeMode === 'original') {
-      const origPoly = L.polyline(origLatLngs, {
-        color: '#ff6b6b', weight: 3, opacity: 0.85,
-        dashArray: '6 8', lineCap: 'round'
+      // Neon kavisli arc — orijinal sıra (kırmızı kesikli)
+      const arcOrig = makeArcPath(origLatLngs);
+      const origPoly = L.polyline(arcOrig, {
+        color: '#ef4444', weight: 2.5, opacity: 0.82,
+        dashArray: '7 9', lineCap: 'round', lineJoin: 'round',
       }).addTo(map);
       polyRef.current.push(origPoly);
     }
 
     if (routeMode === 'both' || routeMode === 'optimized') {
-      const optPoly = L.polyline(optSorted, {
-        color: '#5dd6e6', weight: 3.5, opacity: 0.9,
+      // Neon kavisli arc — optimize sıra (cyan parlak)
+      const arcOpt = makeArcPath(optSorted);
+      const optPoly = L.polyline(arcOpt, {
+        color: '#0891b2', weight: 3.5, opacity: 0.92,
+        lineCap: 'round', lineJoin: 'round',
       }).addTo(map);
-      polyRef.current.push(optPoly);
+      // İkinci katman: parlama efekti
+      const optGlow = L.polyline(arcOpt, {
+        color: '#38bdf8', weight: 6, opacity: 0.22,
+        lineCap: 'round', lineJoin: 'round',
+      }).addTo(map);
+      polyRef.current.push(optPoly, optGlow);
     }
 
     // Depot marker
     const depotIcon = L.divIcon({
       html: '<div class="lf-depot-marker"></div>',
-      className: '', iconSize: [20, 20], iconAnchor: [10, 10],
+      className: '', iconSize: [22, 22], iconAnchor: [11, 11],
     });
     const depot = L.marker(SIVAS_CENTER, { icon: depotIcon }).addTo(map);
     markersRef.current.push(depot);
 
-    // Stop markers — with window-miss alert
-    validStops.forEach((s, i) => {
+    // Çakışan noktaları offset ile ayır, sonra marker ekle
+    const displayStops = offsetOverlaps(validStops);
+    displayStops.forEach((s, i) => {
       const ok  = s.original.within_time_window;
       const d   = s.dynamic_conditions || {};
       const risk = d.delay_risk_score || 0;
@@ -890,21 +1238,21 @@ function MapView({ route, allRoutes, weatherVisible, weatherScenario, routeMode,
       const icon = L.divIcon({
         html: `
           <div class="lf-stop-marker">
-            <div class="lf-stop-pin ${ok ? 'ok' : 'miss'}">${i + 1}${missAlert}</div>
+            <div class="lf-stop-pin ${ok ? 'ok' : 'miss'}" style="width:30px;height:30px;font-size:10px">${i + 1}${missAlert}</div>
             <div class="lf-stop-badge ${ok ? riskClass : 'risk-high'}">${badgeText}</div>
           </div>`,
-        className: '', iconSize: [80, 50], iconAnchor: [13, 26],
+        className: '', iconSize: [92, 58], iconAnchor: [15, 30],
       });
 
       const tooltip = `
         <b>${s.stop_id}</b><br/>
-        Varış (orj.): <b style="color:${ok?'#8ee68a':'#ff6b6b'}">${s.original.predicted_arrival}</b><br/>
+        Varış (orj.): <b style="color:${ok?'#16a34a':'#dc2626'}">${s.original.predicted_arrival}</b><br/>
         Pencere: ${s.time_window_open}–${s.time_window_close}<br/>
         Hava: ${weather} · Yol: ${surface}<br/>
         Tıkanıklık: ${cong}% · Risk: ${risk.toFixed(2)}
-        ${!ok ? '<br/><b style="color:#ff6b6b">⚠ PENCERE KAÇIRILDI</b>' : ''}`;
+        ${!ok ? '<br/><b style="color:#dc2626">⚠ PENCERE KAÇIRILDI</b>' : ''}`;
 
-      const marker = L.marker([s.latitude, s.longitude], { icon })
+      const marker = L.marker([s._lat ?? s.latitude, s._lon ?? s.longitude], { icon })
         .bindTooltip(tooltip, { direction: 'top', offset: [0, -28], className: 'lf-tip' })
         .addTo(map);
       markersRef.current.push(marker);
@@ -939,8 +1287,8 @@ function MapView({ route, allRoutes, weatherVisible, weatherScenario, routeMode,
            setMousePos({ x: e.clientX - r.left, y: e.clientY - r.top });
          }}>
 
-      {/* Command Sphere — fisheye lens effect */}
-      <div className="map-sphere-stage">
+      {/* Command Sphere — projection class toggled via prop */}
+      <div className={`map-sphere-stage ${projectionMode === 'flat' ? 'proj-flat' : ''}`}>
         <div className="map-sphere-container">
           <div className="map-hud-ring r4"></div>
           <div className="map-hud-ring r3"></div>
@@ -960,11 +1308,35 @@ function MapView({ route, allRoutes, weatherVisible, weatherScenario, routeMode,
 
       {/* Overlays — outside the tilt so they stay flat */}
       <div className="map-overlay-tl">
-        <button className="map-btn" title="Yakınlaştır" onClick={() => leafletRef.current && leafletRef.current.zoomIn()}>+</button>
-        <button className="map-btn" title="Uzaklaştır" onClick={() => leafletRef.current && leafletRef.current.zoomOut()}>−</button>
-        <button className="map-btn" title="Merkeze git"
-          onClick={() => leafletRef.current && leafletRef.current.setView(SIVAS_CENTER, 10)}>◎</button>
+        <button className="map-btn" title="Yakınlaştır"  onClick={() => leafletRef.current && leafletRef.current.zoomIn()}>+</button>
+        <button className="map-btn" title="Uzaklaştır"   onClick={() => leafletRef.current && leafletRef.current.zoomOut()}>−</button>
+        <button className="map-btn" title="Merkeze git"  onClick={() => leafletRef.current && leafletRef.current.setView(SIVAS_CENTER, 10)}>◎</button>
+        <button className={`map-btn ${settingsOpen ? 'active' : ''}`} title="Harita Ayarları"
+          onClick={() => setSettingsOpen(v => !v)}>⚙</button>
       </div>
+
+      {/* Map settings popup */}
+      {settingsOpen && (
+        <div className="map-settings-popup">
+          <div className="sp-head">Harita Ayarları</div>
+          <div className="sp-row">
+            <span>Stil</span>
+            <div className="sp-pills">
+              {[['satellite','SAT'],['flat','FLAT']].map(([k,l]) => (
+                <button key={k} className={mapStyle === k ? 'active' : ''} onClick={() => onMapStyle(k)}>{l}</button>
+              ))}
+            </div>
+          </div>
+          <div className="sp-row" style={{ marginTop: 4 }}>
+            <span>Projeksiyon</span>
+            <div className="sp-pills">
+              {[['sphere','SPHERE'],['flat','FLAT']].map(([k,l]) => (
+                <button key={k} className={projectionMode === k ? 'active' : ''} onClick={() => onProjectionMode(k)}>{l}</button>
+              ))}
+            </div>
+          </div>
+        </div>
+      )}
 
       <div className="map-overlay-tr">
         <div className="map-hud">
@@ -972,16 +1344,6 @@ function MapView({ route, allRoutes, weatherVisible, weatherScenario, routeMode,
         </div>
         <div className="map-hud">
           <span className="k">MESAFE</span><span className="v">{route ? Number(route.total_distance_km).toFixed(1) : '—'} km</span>
-        </div>
-        <div className="map-layer-toggle">
-          <label className={`toggle-item on`}>
-            <span className="dot" style={{ background: 'rgba(93,214,230,0.7)' }}></span>
-            <span>SAT</span>
-          </label>
-          <label className={`toggle-item on`}>
-            <span className="dot" style={{ background: 'var(--cyan)' }}></span>
-            <span>HUD</span>
-          </label>
         </div>
       </div>
 
@@ -1627,7 +1989,11 @@ function App() {
   const [loading,    setLoading]    = useState(true);
   const [loadError,  setLoadError]  = useState(null);
   const [loadProgress, setLoadProgress] = useState({ done: 0, total: 0 });
-  const [optimizing, setOptimizing] = useState(false);
+  const [optimizing,      setOptimizing]      = useState(false);
+  const [leftOpen,        setLeftOpen]        = useState(true);
+  const [rightOpen,       setRightOpen]       = useState(true);
+  const [mapStyle,        setMapStyle]        = useState('satellite');
+  const [projectionMode,  setProjectionMode]  = useState('sphere');
   const [tweaks, setTweaks] = useState(() => {
     try {
       const s = localStorage.getItem('sivas-tweaks');
@@ -1638,9 +2004,9 @@ function App() {
 
   useEffect(() => {
     const accentMap = {
-      cyan:   { main: '#5dd6e6', soft: 'rgba(93,214,230,0.12)',  glow: 'rgba(93,214,230,0.35)' },
-      lime:   { main: '#8ee68a', soft: 'rgba(142,230,138,0.12)', glow: 'rgba(142,230,138,0.35)' },
-      violet: { main: '#a78bfa', soft: 'rgba(167,139,250,0.12)', glow: 'rgba(167,139,250,0.35)' },
+      cyan:   { main: '#0891b2', soft: 'rgba(8,145,178,0.10)',   glow: 'rgba(8,145,178,0.30)'  },
+      lime:   { main: '#16a34a', soft: 'rgba(22,163,74,0.10)',   glow: 'rgba(22,163,74,0.30)'  },
+      violet: { main: '#7c3aed', soft: 'rgba(124,58,237,0.10)',  glow: 'rgba(124,58,237,0.30)' },
     };
     const a = accentMap[tweaks.accent] || accentMap.violet;
     document.documentElement.style.setProperty('--cyan',      a.main);
@@ -1681,7 +2047,7 @@ function App() {
       const [modelStats, circuity, routeList] = await Promise.all([
         fetch(`${API_BASE}/stats/model`).then(r => { if (!r.ok) throw new Error('stats/model '+r.status); return r.json(); }),
         fetch(`${API_BASE}/stats/circuity`).then(r => { if (!r.ok) throw new Error('stats/circuity '+r.status); return r.json(); }),
-        fetch(`${API_BASE}/routes?limit=40`).then(r => { if (!r.ok) throw new Error('routes '+r.status); return r.json(); }),
+        fetch(`${API_BASE}/routes?limit=80`).then(r => { if (!r.ok) throw new Error('routes '+r.status); return r.json(); }),
       ]);
       console.log('[loadAll] meta OK · routes:', routeList.length, '· sample:', routeList[0]);
       if (!Array.isArray(routeList) || routeList.length === 0) {
@@ -1704,7 +2070,7 @@ function App() {
           try { return await fetchAndMergeRoute(r.route_id, weather); }
           catch (e) { console.error('Route load failed:', r.route_id, e); return null; }
         },
-        6,
+        8,
         (done, total) => {
           setLoadProgress({ done, total });
           console.log(`[loadAll] progress ${done}/${total}`);
@@ -1802,11 +2168,11 @@ function App() {
     return (
       <div style={{
         display: 'flex', alignItems: 'center', justifyContent: 'center',
-        height: '100vh', background: '#0B1120', color: 'var(--text-2)',
+        height: '100vh', background: 'var(--bg-0)', color: 'var(--text-2)',
         fontFamily: 'var(--font-mono)', fontSize: 14, flexDirection: 'column', gap: 16,
       }}>
         <div style={{ color: 'var(--cyan)', fontSize: 22, fontWeight: 600, letterSpacing: '-0.02em',
-          textShadow: '0 0 20px var(--cyan-glow)' }}>LOJİSTİK KOMUTA</div>
+          textShadow: '0 0 16px var(--cyan-glow)' }}>LOJİSTİK KOMUTA</div>
         <div style={{ color: 'var(--text-3)' }}>
           {loadProgress.total > 0
             ? `Rotalar optimize ediliyor… ${loadProgress.done}/${loadProgress.total}`
@@ -1830,7 +2196,7 @@ function App() {
     return (
       <div style={{
         display: 'flex', alignItems: 'center', justifyContent: 'center',
-        height: '100vh', background: '#0B1120', color: 'var(--red)',
+        height: '100vh', background: 'var(--bg-0)', color: 'var(--red)',
         fontFamily: 'var(--font-mono)', fontSize: 14, flexDirection: 'column', gap: 12, padding: 40, textAlign: 'center'
       }}>
         <div style={{ fontSize: 20, fontWeight: 600 }}>BAĞLANTI HATASI</div>
@@ -1852,25 +2218,39 @@ function App() {
         optimizing={optimizing}
       />
 
-      <div className={`main ${tweaks.layout === 'focus' ? 'wide-map' : ''}`}>
+      <div className="main" style={{
+        gridTemplateColumns: (() => {
+          const W = tweaks.layout === 'focus';
+          const L = leftOpen  ? (W ? '300px' : '340px') : '0px';
+          const R = rightOpen ? (W ? '380px' : '400px') : '0px';
+          return `${L} 1fr ${R}`;
+        })()
+      }}>
         {/* LEFT — Fleet list + Alerts */}
-        <div className="pane">
-          <ErrorBoundary label="FleetList" minimal>
-            <FleetList
-              routes={routes}
-              selectedId={selectedId}
-              onSelect={handleSelectRoute}
-              filter={filter}
-              onFilter={setFilter}
-            />
-          </ErrorBoundary>
-          <ErrorBoundary label="AlertsStrip" minimal>
-            <AlertsStrip routes={routes} onSelect={handleSelectRoute} />
-          </ErrorBoundary>
+        <div className="pane" style={{ overflow: 'hidden', position: 'relative', minWidth: 0 }}>
+          {leftOpen && <>
+            <ErrorBoundary label="FleetList" minimal>
+              <FleetList
+                routes={routes}
+                selectedId={selectedId}
+                onSelect={handleSelectRoute}
+                filter={filter}
+                onFilter={setFilter}
+              />
+            </ErrorBoundary>
+            <ErrorBoundary label="AlertsStrip" minimal>
+              <AlertsStrip routes={routes} onSelect={handleSelectRoute} />
+            </ErrorBoundary>
+          </>}
+          <button className="pane-toggle-btn left-toggle"
+            onClick={() => setLeftOpen(v => !v)}
+            title={leftOpen ? 'Paneli Kapat' : 'Paneli Aç'}>
+            {leftOpen ? '‹' : '›'}
+          </button>
         </div>
 
         {/* CENTER — KPI strip + Map + Efficiency Widget */}
-        <div className="pane" style={{ position: 'relative' }}>
+        <div className="pane" style={{ position: 'relative', minWidth: 0 }}>
           <ErrorBoundary label="KpiStrip" minimal>
             <KpiStrip routes={routes} />
           </ErrorBoundary>
@@ -1883,6 +2263,10 @@ function App() {
                 weatherScenario={tweaks.weather}
                 routeMode={routeMode}
                 onRouteMode={setRouteMode}
+                mapStyle={mapStyle}
+                onMapStyle={setMapStyle}
+                projectionMode={projectionMode}
+                onProjectionMode={setProjectionMode}
               />
             </ErrorBoundary>
             <ErrorBoundary label="EfficiencyWidget" minimal>
@@ -1892,15 +2276,22 @@ function App() {
         </div>
 
         {/* RIGHT — Detail pane */}
-        <div className="pane">
-          <ErrorBoundary label="DetailPane" minimal>
-            <DetailPane
-              route={selected}
-              onApply={() => setApplied({ ...applied, [selectedId]: true })}
-              applied={applied[selectedId]}
-              onReOptimize={reOptimizeSelected}
-            />
-          </ErrorBoundary>
+        <div className="pane" style={{ overflow: 'hidden', position: 'relative', minWidth: 0 }}>
+          {rightOpen && (
+            <ErrorBoundary label="DetailPane" minimal>
+              <DetailPane
+                route={selected}
+                onApply={() => setApplied({ ...applied, [selectedId]: true })}
+                applied={applied[selectedId]}
+                onReOptimize={reOptimizeSelected}
+              />
+            </ErrorBoundary>
+          )}
+          <button className="pane-toggle-btn right-toggle"
+            onClick={() => setRightOpen(v => !v)}
+            title={rightOpen ? 'Paneli Kapat' : 'Paneli Aç'}>
+            {rightOpen ? '›' : '‹'}
+          </button>
         </div>
       </div>
 
