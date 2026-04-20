@@ -284,10 +284,10 @@ function MapView({ route, allRoutes, weatherVisible, weatherScenario, routeMode,
 
       <div className="map-overlay-tr">
         <div className="map-hud">
-          <span className="k">ROTA</span><span className="v">{route ? route.route_id : '—'}</span>
+          <span className="k">{window.t('map_route')}</span><span className="v">{route ? route.route_id : '—'}</span>
         </div>
         <div className="map-hud">
-          <span className="k">MESAFE</span><span className="v">{route ? Number(route.total_distance_km).toFixed(1) : '—'} km</span>
+          <span className="k">{window.t('map_distance')}</span><span className="v">{route ? Number(route.total_distance_km).toFixed(1) : '—'} km</span>
         </div>
       </div>
 
