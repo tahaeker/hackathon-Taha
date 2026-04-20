@@ -10,7 +10,7 @@ from pydantic import BaseModel
 
 from pathlib import Path
 
-from data_loader import load_all, compute_circuity_factors
+from data_loader import load_all, compute_circuity_factors, haversine
 from predictor import DelayPredictor
 from optimizer import simulate_route, optimize_stop_order, compute_metrics
 
@@ -27,7 +27,7 @@ async def lifespan(app: FastAPI):
     predictor = DelayPredictor()
     train_stats = predictor.train(routes, stops, traffic, weather)
 
-    circuity = compute_circuity_factors(stops)
+    circuity, circuity_counts = compute_circuity_factors(stops)
 
     state["routes"] = routes
     state["stops"] = stops
@@ -35,7 +35,8 @@ async def lifespan(app: FastAPI):
     state["weather"] = weather
     state["hist"] = hist
     state["predictor"] = predictor
-    state["circuity"] = circuity
+    state["circuity"] = circuity          # flat CF dict — used by optimizer
+    state["circuity_counts"] = circuity_counts  # sample counts — exposed in API
     state["train_stats"] = train_stats
 
     print("=" * 60)
@@ -198,6 +199,25 @@ def optimize_route(route_id: str, req: OptimizeRequest):
     traffic = req.traffic_level or str(route_info["traffic_level"])
 
     dep = pd.Timestamp(route_info["departure_planned"])
+
+    # ── Feature Alignment: compute route-specific values from actual stops ──
+    pct_mountain = float((stops_df["road_type"] == "mountain").mean())
+    pct_highway  = float((stops_df["road_type"] == "highway").mean())
+    pct_urban    = float((stops_df["road_type"] == "urban").mean())
+    pct_rural    = float((stops_df["road_type"] == "rural").mean())
+    total_packages  = int(stops_df["package_count"].sum()) if "package_count" in stops_df.columns else 30
+    total_weight_kg = float(stops_df["package_weight_kg"].sum()) if "package_weight_kg" in stops_df.columns else 100.0
+
+    # Nearest traffic congestion at route centroid
+    center_lat = float(stops_df["latitude"].mean())
+    center_lon = float(stops_df["longitude"].mean())
+    traffic_df = state["traffic"]
+    t_dists = traffic_df.apply(
+        lambda t: haversine(center_lat, center_lon, float(t["center_lat"]), float(t["center_lon"])),
+        axis=1,
+    )
+    nearest_congestion = float(traffic_df.iloc[t_dists.idxmin()]["congestion_ratio"])
+
     predicted_delay_min = state["predictor"].predict_route_delay(
         weather_condition=weather,
         temperature_c=float(route_info["temperature_c"]),
@@ -212,7 +232,15 @@ def optimize_route(route_id: str, req: OptimizeRequest):
         total_distance_km=float(route_info["total_distance_km"]),
         hour=dep.hour,
         day_of_week=dep.dayofweek,
+        month=dep.month,                          # ← Seasonal intelligence fix
         vehicle_type=str(route_info["vehicle_type"]),
+        pct_mountain=pct_mountain,                # ← Feature alignment
+        pct_highway=pct_highway,
+        pct_urban=pct_urban,
+        pct_rural=pct_rural,
+        total_packages=total_packages,
+        total_weight_kg=total_weight_kg,
+        nearest_congestion_ratio=nearest_congestion,
     )
 
     delay_factor = _compute_delay_factor(route_info, predicted_delay_min)
@@ -281,8 +309,10 @@ def predict_delay(req: PredictRequest):
 
 @app.get("/stats/circuity", tags=["Meta"])
 def get_circuity():
-    """Return the computed Internal Circuity Factors per road type."""
-    return state.get("circuity", {})
+    """Return Internal Circuity Factors with sample counts per road type."""
+    cf     = state.get("circuity", {})
+    counts = state.get("circuity_counts", {})
+    return {rt: {"cf": round(v, 3), "n": counts.get(rt, 0)} for rt, v in cf.items()}
 
 
 @app.get("/stats/model", tags=["Meta"])

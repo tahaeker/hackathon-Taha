@@ -170,7 +170,8 @@ def simulate_route(
         )
 
         results.append(_stop_result(stop, current_time, travel_min, stop_delay, idx + 1, dynamic))
-        current_time += timedelta(minutes=float(stop["planned_service_min"]))
+        # Cascade effect: stop_delay propagates into subsequent ETAs
+        current_time += timedelta(minutes=float(stop["planned_service_min"]) + stop_delay)
         prev_lat, prev_lon = lat, lon
 
     return results
@@ -275,7 +276,8 @@ def optimize_stop_order(
         visited.append(
             _stop_result(chosen, current_time, best_travel, stop_delay, len(visited) + 1, final_dynamic)
         )
-        current_time += timedelta(minutes=float(chosen["planned_service_min"]))
+        # Cascade effect: stop_delay propagates into subsequent ETAs
+        current_time += timedelta(minutes=float(chosen["planned_service_min"]) + stop_delay)
         cur_lat, cur_lon = lat, lon
         remaining = remaining.drop(best_idx).reset_index(drop=True)
 

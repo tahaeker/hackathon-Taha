@@ -93,14 +93,17 @@ def compute_circuity_factors(stops: pd.DataFrame) -> dict:
             buckets.setdefault(str(curr["road_type"]), []).append(ratio)
 
     result = {}
+    counts = {}
     for rt, vals in buckets.items():
         result[rt] = float(np.median(vals))
+        counts[rt] = len(vals)
 
     # Varsayılan değerler — veri setinde görülmemiş road_type için
     defaults = {"highway": 1.10, "urban": 1.35, "rural": 1.45, "mountain": 1.65}
     for rt, default in defaults.items():
         result.setdefault(rt, default)
-    return result
+        counts.setdefault(rt, 0)
+    return result, counts
 
 
 # ---------------------------------------------------------------------------
