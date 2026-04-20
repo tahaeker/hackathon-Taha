@@ -75,6 +75,18 @@ const STRINGS = {
     alert_center: 'Uyarı Merkezi',
     alerts_active: 'aktif',
     no_alerts: 'Aktif uyarı yok.',
+    alert_window_miss_risk: 'pencere kaçırma riski',
+    alert_icy_window_risk: 'BUZLU YOL + pencere riski',
+    alert_visibility: 'görüş',
+    alert_delay_factor: 'Delay factor',
+    alert_rf_delay: 'RF tahmini',
+    alert_delay_min_suffix: 'dk gecikme',
+    alert_arrival: 'varış',
+    alert_window: 'pencere',
+    alert_risk_score: 'Risk skoru',
+    alert_congestion: 'tıkanıklık',
+    map_route: 'ROTA',
+    map_distance: 'MESAFE',
 
     // Tweaks
     tweaks: 'Tweaks',
@@ -112,7 +124,7 @@ const STRINGS = {
     f_mae_short: 'MAE',
 
     // Efficiency widget
-    efficiency_gain: 'Verimlilik Kazancı',
+    efficiency_gain: 'VERİMLİLİK KAZANCI',
 
     // Lang toggle
     language: 'Dil',
@@ -190,6 +202,18 @@ const STRINGS = {
     alert_center: 'Alert Center',
     alerts_active: 'active',
     no_alerts: 'No active alerts.',
+    alert_window_miss_risk: 'time window miss risk',
+    alert_icy_window_risk: 'ICY ROAD + window risk',
+    alert_visibility: 'visibility',
+    alert_delay_factor: 'Delay factor',
+    alert_rf_delay: 'RF predicted',
+    alert_delay_min_suffix: 'min delay',
+    alert_arrival: 'arrival',
+    alert_window: 'window',
+    alert_risk_score: 'Risk score',
+    alert_congestion: 'congestion',
+    map_route: 'ROUTE',
+    map_distance: 'DISTANCE',
 
     tweaks: 'Tweaks',
     weather_scenario: 'Weather Scenario',
@@ -223,7 +247,7 @@ const STRINGS = {
     f_model: 'MODEL',
     f_mae_short: 'MAE',
 
-    efficiency_gain: 'Efficiency Gain',
+    efficiency_gain: 'EFFICIENCY GAIN',
 
     language: 'Language',
 
@@ -299,6 +323,18 @@ const STRINGS = {
     alert_center: 'Центр оповещений',
     alerts_active: 'активных',
     no_alerts: 'Нет активных оповещений.',
+    alert_window_miss_risk: 'риск пропуска окна',
+    alert_icy_window_risk: 'ГОЛОЛЁД + риск окна',
+    alert_visibility: 'видимость',
+    alert_delay_factor: 'Коэф. задержки',
+    alert_rf_delay: 'RF прогноз',
+    alert_delay_min_suffix: 'мин задержки',
+    alert_arrival: 'прибытие',
+    alert_window: 'окно',
+    alert_risk_score: 'Оценка риска',
+    alert_congestion: 'загруженность',
+    map_route: 'МАРШРУТ',
+    map_distance: 'РАССТОЯНИЕ',
 
     tweaks: 'Настройки',
     weather_scenario: 'Погодный сценарий',
@@ -332,7 +368,7 @@ const STRINGS = {
     f_model: 'МОДЕЛЬ',
     f_mae_short: 'MAE',
 
-    efficiency_gain: 'Прирост эффективности',
+    efficiency_gain: 'ПРИРОСТ ЭФФЕКТИВНОСТИ',
 
     language: 'Язык',
 

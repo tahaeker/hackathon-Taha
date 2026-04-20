@@ -455,10 +455,10 @@ function AlertsStrip({ routes, onSelect }) {
       if (r.severity === 'critical') {
         list.push({
           severity: 'critical', route_id: r.route_id,
-          title: `${r.route_id}: pencere kaçırma riski`,
-          desc: `${wc} · görüş ${r.visibility_km ?? '—'}km · Delay factor ${Number(r.delay_factor || 1).toFixed(2)}×`,
+          title: `${r.route_id}: ${window.t('alert_window_miss_risk')}`,
+          desc: `${wc} · ${window.t('alert_visibility')} ${r.visibility_km ?? '—'}km · ${window.t('alert_delay_factor')} ${Number(r.delay_factor || 1).toFixed(2)}×`,
           time: '—',
-          meta: `RF tahmini +${Number(r.rf_predicted_total_delay_min || 0).toFixed(0)} dk gecikme`
+          meta: `${window.t('alert_rf_delay')} +${Number(r.rf_predicted_total_delay_min || 0).toFixed(0)} ${window.t('alert_delay_min_suffix')}`
         });
       }
       if (Array.isArray(r.stops)) {
@@ -467,17 +467,17 @@ function AlertsStrip({ routes, onSelect }) {
           if (!s.original.within_time_window && s.dynamic_conditions.road_surface === 'icy') {
             list.push({
               severity: 'warning', route_id: r.route_id,
-              title: `${s.stop_id}: BUZLU YOL + pencere riski`,
-              desc: `${r.route_id} · ${s.road_type || '—'} · varış ${s.original.predicted_arrival} (pencere ${s.time_window_close})`,
+              title: `${s.stop_id}: ${window.t('alert_icy_window_risk')}`,
+              desc: `${r.route_id} · ${s.road_type || '—'} · ${window.t('alert_arrival')} ${s.original.predicted_arrival} (${window.t('alert_window')} ${s.time_window_close})`,
               time: s.original.predicted_arrival,
-              meta: `Risk skoru ${Number(s.dynamic_conditions.delay_risk_score || 0).toFixed(2)} · tıkanıklık %${((s.dynamic_conditions.congestion_ratio || 0)*100).toFixed(0)}`
+              meta: `${window.t('alert_risk_score')} ${Number(s.dynamic_conditions.delay_risk_score || 0).toFixed(2)} · ${window.t('alert_congestion')} %${((s.dynamic_conditions.congestion_ratio || 0)*100).toFixed(0)}`
             });
           }
         });
       }
     });
     return list.slice(0, 8);
-  }, [routes]);
+  }, [routes, lang]);
 
   return (
     <>
