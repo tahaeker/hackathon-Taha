@@ -18,12 +18,8 @@ import numpy as np
 from datetime import timedelta
 from typing import List
 
-from data_loader import haversine, get_weather_at, get_traffic_at
+from data_loader import haversine, get_weather_at, get_traffic_at, lookup_effective_speed
 from predictor import DelayPredictor
-
-# Yol türüne göre ideal hız (km/h)
-BASE_SPEED = {"highway": 90.0, "urban": 45.0, "rural": 65.0, "mountain": 40.0}
-DEFAULT_SPEED = 55.0
 
 
 # ---------------------------------------------------------------------------
@@ -34,13 +30,20 @@ def _travel_minutes(
     lat1: float, lon1: float,
     lat2: float, lon2: float,
     road_type: str,
+    traffic_level: str,
+    weather_condition: str,
     circuity: dict,
     delay_factor: float,
+    speed_table: dict,
 ) -> float:
+    """
+    A→C kenarı için seyahat süresi tahmini.
+    Hız, veri-güdümlü speed_table'dan (road × traffic × weather) çekilir.
+    """
     straight_km = haversine(lat1, lon1, lat2, lon2)
     cf = circuity.get(road_type, 1.4)
     road_km = straight_km * cf
-    speed = BASE_SPEED.get(road_type, DEFAULT_SPEED)
+    speed = lookup_effective_speed(road_type, traffic_level, weather_condition, speed_table)
     return (road_km / speed) * 60.0 * delay_factor
 
 
@@ -121,6 +124,7 @@ def simulate_route(
     weather_df: pd.DataFrame,
     traffic_df: pd.DataFrame,
     circuity: dict,
+    speed_table: dict,
     initial_weather: str,
     initial_traffic: str,
 ) -> List[dict]:
@@ -133,6 +137,9 @@ def simulate_route(
       3. Dinamik congestion_ratio ile seyahat süresi düzeltilir.
     """
     results = []
+    # delay_factor artık SADECE ilk stop'un planned_travel_min'ini düzeltmek için.
+    # Sonraki stop'lar effective_speed (gerçek kurye hızı) üzerinden hesaplanıyor,
+    # böylece çift sayma (delay_factor × congestion × stop_delay) yapılmıyor.
     delay_factor = float(route_info.get("predicted_delay_factor", 1.0))
     current_time = pd.Timestamp(route_info["departure_planned"])
 
@@ -147,16 +154,18 @@ def simulate_route(
         # --- Dinamik koşulları çek ---
         dynamic = _dynamic_conditions(lat, lon, road_type, current_time, weather_df, traffic_df)
 
-        # Congestion dampened: 0.35 katsayısıyla yumuşatıldı.
-        # Eski: 1 + ratio → çift gecikme olabiliyordu.
-        # Yeni: en fazla %35 seyahat süresi artışı (ratio=1 → ×1.35).
-        congestion_penalty = 1.0 + dynamic["congestion_ratio"] * 0.35
-
         if idx == 0:
-            travel_min = float(stop["planned_travel_min"]) * delay_factor * congestion_penalty
+            # İlk stop: planned_travel_min koşullara göre ayarlanmamış flat bir değer,
+            # bu yüzden delay_factor ile düzeltiyoruz.
+            travel_min = float(stop["planned_travel_min"]) * delay_factor
         else:
-            base_travel = _travel_minutes(prev_lat, prev_lon, lat, lon, road_type, circuity, delay_factor)
-            travel_min = base_travel * congestion_penalty
+            # Sonraki stop'lar: effective_speed (road × traffic × weather) zaten
+            # gerçek kurye verisinden geldiği için ekstra çarpan UYGULAMIYORUZ.
+            travel_min = _travel_minutes(
+                prev_lat, prev_lon, lat, lon, road_type,
+                dynamic["traffic_level"], dynamic["weather_condition"],
+                circuity, delay_factor=1.0, speed_table=speed_table,
+            )
 
         current_time += timedelta(minutes=travel_min)
 
@@ -189,6 +198,7 @@ def optimize_stop_order(
     weather_df: pd.DataFrame,
     traffic_df: pd.DataFrame,
     circuity: dict,
+    speed_table: dict,
     initial_weather: str,
     initial_traffic: str,
 ) -> List[dict]:
@@ -199,9 +209,10 @@ def optimize_stop_order(
     göre dinamik koşullar çekilir. Böylece tıkanık bir bölgeyi gece
     geçmek ile rush-hour'da geçmek farklı skorlanır.
 
-    Skor = seyahat_süresi × congestion_penalty + pencere_cezası - aciliyet_bonusu
+    Skor = seyahat_süresi + pencere_cezası - aciliyet_bonusu
+    (Seyahat süresi artık effective_speed'ten geldiği için ekstra çarpan yok.)
     """
-    delay_factor = float(route_info.get("predicted_delay_factor", 1.0))
+    # delay_factor burada KULLANILMIYOR çünkü tüm travel'lar speed_table'dan geliyor.
     current_time = pd.Timestamp(route_info["departure_planned"])
     cur_lat = float(stops_df.iloc[0]["latitude"])
     cur_lon = float(stops_df.iloc[0]["longitude"])
@@ -220,16 +231,16 @@ def optimize_stop_order(
             lon = float(row["longitude"])
             road_type = str(row["road_type"])
 
-            # Tahmini varış saatini hesapla (skor için ön-hesap)
-            base_travel = _travel_minutes(cur_lat, cur_lon, lat, lon, road_type, circuity, delay_factor)
+            # Seyahat süresi doğrudan effective_speed tablosundan — ekstra çarpan yok.
+            travel = _travel_minutes(
+                cur_lat, cur_lon, lat, lon, road_type,
+                initial_traffic, initial_weather,
+                circuity, delay_factor=1.0, speed_table=speed_table,
+            )
 
-            # Dinamik koşulları tahmini ETA saatinde çek
-            eta = current_time + timedelta(minutes=base_travel)
+            # Dinamik koşulları ETA'da çek (stop_delay ve UI için bilgi amaçlı)
+            eta = current_time + timedelta(minutes=travel)
             dyn = _dynamic_conditions(lat, lon, road_type, eta, weather_df, traffic_df)
-
-            # Congestion dampened (aynı simülasyon mantığı)
-            congestion_penalty = 1.0 + dyn["congestion_ratio"] * 0.35
-            travel = base_travel * congestion_penalty
 
             window_close = pd.Timestamp(row["time_window_close"])
             minutes_until_close = (window_close - current_time).total_seconds() / 60.0

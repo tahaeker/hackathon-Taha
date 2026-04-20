@@ -5,6 +5,7 @@ const { useState, useEffect, useMemo, useRef, Component } = React;
 // ═══════════════════════════════════════════
 
 function App() {
+  const [lang]     = window.useLang();
   const [routes,     setRoutes]     = useState([]);
   const [selectedId, setSelectedId] = useState(null);
   const [filter,     setFilter]     = useState('all');
@@ -197,11 +198,11 @@ function App() {
         fontFamily: 'var(--font-mono)', fontSize: 14, flexDirection: 'column', gap: 16,
       }}>
         <div style={{ color: 'var(--cyan)', fontSize: 22, fontWeight: 600, letterSpacing: '-0.02em',
-          textShadow: '0 0 16px var(--cyan-glow)' }}>LOJİSTİK KOMUTA</div>
+          textShadow: '0 0 16px var(--cyan-glow)' }}>{window.t('app_title')}</div>
         <div style={{ color: 'var(--text-3)' }}>
           {loadProgress.total > 0
-            ? `Rotalar optimize ediliyor… ${loadProgress.done}/${loadProgress.total}`
-            : 'Model yükleniyor…'}
+            ? `${window.t('loading_routes')} ${loadProgress.done}/${loadProgress.total}`
+            : window.t('loading_model')}
         </div>
         <div style={{ width: 280, height: 3, background: 'var(--bg-3)', borderRadius: 2, overflow: 'hidden' }}>
           <div style={{ width: `${pct}%`, height: '100%', background: 'var(--cyan)',
@@ -224,11 +225,11 @@ function App() {
         height: '100vh', background: 'var(--bg-0)', color: 'var(--red)',
         fontFamily: 'var(--font-mono)', fontSize: 14, flexDirection: 'column', gap: 12, padding: 40, textAlign: 'center'
       }}>
-        <div style={{ fontSize: 20, fontWeight: 600 }}>BAĞLANTI HATASI</div>
+        <div style={{ fontSize: 20, fontWeight: 600 }}>{window.t('connection_error')}</div>
         <div style={{ color: 'var(--text-2)' }}>{loadError}</div>
-        <div style={{ color: 'var(--text-3)', fontSize: 12 }}>Konsolu (F12) kontrol edin.</div>
+        <div style={{ color: 'var(--text-3)', fontSize: 12 }}>{window.t('check_console')}</div>
         <button className="btn btn-primary" style={{ marginTop: 16, maxWidth: 200 }}
-          onClick={() => window.location.reload()}>Yeniden Dene</button>
+          onClick={() => window.location.reload()}>{window.t('retry')}</button>
       </div>
     );
   }

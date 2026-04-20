@@ -86,6 +86,7 @@ function VehicleIcon({ type }) {
 }
 
 function FleetList({ routes, selectedId, onSelect, filter, onFilter }) {
+  const [lang] = window.useLang();
   const filtered = useMemo(() => {
     if (filter === 'all') return routes;
     return routes.filter(r => r.severity === filter);
@@ -101,17 +102,17 @@ function FleetList({ routes, selectedId, onSelect, filter, onFilter }) {
   return (
     <>
       <div className="pane-header">
-        <h3>Aktif Filo<span className="count">{filtered.length}/{routes.length}</span></h3>
-        <button className="map-btn" style={{ width: 22, height: 22, fontSize: 13 }} title="Sırala">⇅</button>
+        <h3>{window.t('fleet_active')}<span className="count">{filtered.length}/{routes.length}</span></h3>
+        <button className="map-btn" style={{ width: 22, height: 22, fontSize: 13 }} title={window.t('tooltip_sort')}>⇅</button>
       </div>
       <div className="filters">
-        <div className={`f ${filter === 'all' ? 'active' : ''}`} onClick={() => onFilter('all')}>Tümü {counts.all}</div>
+        <div className={`f ${filter === 'all' ? 'active' : ''}`} onClick={() => onFilter('all')}>{window.t('filter_all')} {counts.all}</div>
         <div className={`f ${filter === 'critical' ? 'active' : ''}`} onClick={() => onFilter('critical')}
-          style={filter==='critical'?{background:'var(--red)',borderColor:'var(--red)',color:'var(--bg-0)'}:{}}>Kritik {counts.critical}</div>
+          style={filter==='critical'?{background:'var(--red)',borderColor:'var(--red)',color:'var(--bg-0)'}:{}}>{window.t('filter_critical')} {counts.critical}</div>
         <div className={`f ${filter === 'warning' ? 'active' : ''}`} onClick={() => onFilter('warning')}
-          style={filter==='warning'?{background:'var(--amber)',borderColor:'var(--amber)',color:'var(--bg-0)'}:{}}>Uyarı {counts.warning}</div>
+          style={filter==='warning'?{background:'var(--amber)',borderColor:'var(--amber)',color:'var(--bg-0)'}:{}}>{window.t('filter_warning')} {counts.warning}</div>
         <div className={`f ${filter === 'ok' ? 'active' : ''}`} onClick={() => onFilter('ok')}
-          style={filter==='ok'?{background:'var(--lime)',borderColor:'var(--lime)',color:'var(--bg-0)'}:{}}>İyi {counts.ok}</div>
+          style={filter==='ok'?{background:'var(--lime)',borderColor:'var(--lime)',color:'var(--bg-0)'}:{}}>{window.t('filter_ok')} {counts.ok}</div>
       </div>
       <div className="pane-body">
         {filtered.map(r => (
@@ -119,28 +120,28 @@ function FleetList({ routes, selectedId, onSelect, filter, onFilter }) {
             <div className="row-top">
               <div className="route-id">{r.route_id}</div>
               <span className={`badge ${r.severity}`}>
-                {r.severity === 'critical' ? 'KRİTİK' : r.severity === 'warning' ? 'UYARI' : 'NORMAL'}
+                {r.severity === 'critical' ? window.t('sev_critical') : r.severity === 'warning' ? window.t('sev_warning') : window.t('sev_ok')}
               </span>
             </div>
             <div className="vehicle">
               <VehicleIcon type={r.vehicle_type} />
               <span className="mono">{r.vehicle_id}</span>
               <span style={{ color: 'var(--text-3)' }}>·</span>
-              <span>{r.num_stops} durak</span>
+              <span>{r.num_stops} {window.t('unit_stops')}</span>
               <span style={{ color: 'var(--text-3)' }}>·</span>
               <span>{Number(r.total_distance_km).toFixed(0)} km</span>
             </div>
             <div className="row-metrics">
               <div className="m">
-                <span className="k">Zamanında</span>
+                <span className="k">{window.t('on_time')}</span>
                 <span className={`v ${r.original_metrics.on_time_rate < 0.3 ? 'critical' : r.original_metrics.on_time_rate < 0.7 ? 'warning' : 'ok'}`}>
                   {(r.original_metrics.on_time_rate * 100).toFixed(0)}% → {(r.optimized_metrics.on_time_rate * 100).toFixed(0)}%
                 </span>
               </div>
               <div className="m">
-                <span className="k">Gecikme</span>
+                <span className="k">{window.t('delay')}</span>
                 <span className="v" style={{ color: 'var(--lime)' }}>
-                  −{Number(r.improvement.delay_reduction_min).toFixed(0)} dk
+                  −{Number(r.improvement.delay_reduction_min).toFixed(0)} {window.t('unit_min')}
                 </span>
               </div>
             </div>
@@ -173,8 +174,9 @@ function Sparkline({ data, width = 80, height = 22, color = 'var(--cyan)' }) {
 }
 
 function TimelineGantt({ route }) {
+  const [lang] = window.useLang();
   const [mode, setMode] = useState('compare');
-  if (!route || !route.stops) return <div style={{ padding: 20, color: 'var(--text-3)', fontSize: 12 }}>Bu rota için durak detayı yok.</div>;
+  if (!route || !route.stops) return <div style={{ padding: 20, color: 'var(--text-3)', fontSize: 12 }}>{window.t('no_stop_detail')}</div>;
 
   const parseT = (t) => {
     if (!t || t === '??:??') return 0;
@@ -208,13 +210,13 @@ function TimelineGantt({ route }) {
     <div className="timeline">
       <div className="timeline-head">
         <div>
-          <h3 style={{ margin: 0, fontSize: 13, color: 'var(--text-0)', fontWeight: 600 }}>Durak Zaman Çizelgesi</h3>
-          <div style={{ fontSize: 11, color: 'var(--text-3)', marginTop: 2 }}>Yeşil = zamanında · Kırmızı = pencere kaçırıldı · Mavi şerit = teslimat penceresi</div>
+          <h3 style={{ margin: 0, fontSize: 13, color: 'var(--text-0)', fontWeight: 600 }}>{window.t('stop_timeline')}</h3>
+          <div style={{ fontSize: 11, color: 'var(--text-3)', marginTop: 2 }}>{window.t('legend_timeline')}</div>
         </div>
         <div className="tabs">
-          <button className={mode==='compare'?'active':''} onClick={()=>setMode('compare')}>Karşılaştır</button>
-          <button className={mode==='original'?'active':''} onClick={()=>setMode('original')}>Orjinal</button>
-          <button className={mode==='optimized'?'active':''} onClick={()=>setMode('optimized')}>Opt.</button>
+          <button className={mode==='compare'?'active':''} onClick={()=>setMode('compare')}>{window.t('mode_compare')}</button>
+          <button className={mode==='original'?'active':''} onClick={()=>setMode('original')}>{window.t('mode_original')}</button>
+          <button className={mode==='optimized'?'active':''} onClick={()=>setMode('optimized')}>{window.t('mode_optimized')}</button>
         </div>
       </div>
       <div className="gantt-axis">
@@ -341,7 +343,8 @@ function ModelCard({ route }) {
 
 function DetailPane({ route, onApply, applied, onReOptimize }) {
   const [tab, setTab] = useState('timeline');
-  if (!route) return <div style={{ padding: 20, color: 'var(--text-3)' }}>Bir rota seçin</div>;
+  const [lang] = window.useLang();
+  if (!route) return <div style={{ padding: 20, color: 'var(--text-3)' }}>{window.t('no_route_selected')}</div>;
 
   const orig = route.original_metrics  || { on_time_rate: 0, total_predicted_delay_min: 0, avg_delay_per_stop_min: 0 };
   const opt  = route.optimized_metrics || { on_time_rate: 0, total_predicted_delay_min: 0, avg_delay_per_stop_min: 0 };
@@ -359,42 +362,42 @@ function DetailPane({ route, onApply, applied, onReOptimize }) {
             <div style={{ fontSize: 11, color: 'var(--text-2)', marginTop: 2, display: 'flex', gap: 8, alignItems: 'center' }}>
               <VehicleIcon type={vtype} /> {vtype.toUpperCase()}
               <span>·</span>
-              <span>{route.num_stops} durak · {Number(route.total_distance_km).toFixed(0)} km</span>
+              <span>{route.num_stops} {window.t('unit_stops')} · {Number(route.total_distance_km).toFixed(0)} km</span>
               <span>·</span>
-              <span>{route.departure_planned ? new Date(route.departure_planned).toLocaleDateString('tr-TR', { day: '2-digit', month: 'short' }) : '—'}</span>
+              <span>{route.departure_planned ? new Date(route.departure_planned).toLocaleDateString(lang === 'ru' ? 'ru-RU' : lang === 'en' ? 'en-US' : 'tr-TR', { day: '2-digit', month: 'short' }) : '—'}</span>
             </div>
           </div>
           <span className={`badge ${route.severity}`}>
-            {route.severity === 'critical' ? 'KRİTİK' : route.severity === 'warning' ? 'UYARI' : 'NORMAL'}
+            {route.severity === 'critical' ? window.t('sev_critical') : route.severity === 'warning' ? window.t('sev_warning') : window.t('sev_ok')}
           </span>
         </div>
         <div style={{ display: 'flex', gap: 6, fontSize: 11, color: 'var(--text-2)', marginBottom: 8, flexWrap: 'wrap' }}>
           <span className={`cond-pill ${weatherCond}`}>{weatherCond}</span>
           <span className="mono">{route.temperature_c ?? '—'}°C</span>
           <span>·</span>
-          <span>Görüş {route.visibility_km ?? '—'}km</span>
+          <span>{route.visibility_km ?? '—'}km</span>
           <span>·</span>
-          <span>Rüzgar {route.wind_speed_kmh ?? '—'}km/s</span>
+          <span>{route.wind_speed_kmh ?? '—'}km/h</span>
           <span>·</span>
-          <span>Trafik: {trafficLvl}</span>
+          <span>{trafficLvl}</span>
         </div>
 
         {/* 3D COMPARISON CARDS */}
         <div className="comparison">
           <div className="col">
-            <div className="label">Mevcut Plan</div>
+            <div className="label">{window.t('current_plan')}</div>
             <div className="big">{(orig.on_time_rate * 100).toFixed(0)}<span className="unit">%</span></div>
-            <div style={{ fontSize: 11, color: 'var(--text-2)', marginTop: 2 }}>Zamanında teslimat</div>
+            <div style={{ fontSize: 11, color: 'var(--text-2)', marginTop: 2 }}>{window.t('on_time_delivery')}</div>
             <div style={{ marginTop: 6, fontSize: 11, color: 'var(--text-3)', fontFamily: 'var(--font-mono)' }}>
-              Gecikme: {Number(orig.total_predicted_delay_min).toFixed(1)} dk · Ort/durak: {orig.avg_delay_per_stop_min}
+              {window.t('delay')}: {Number(orig.total_predicted_delay_min).toFixed(1)} {window.t('unit_min')}
             </div>
           </div>
           <div className="col optimized">
-            <div className="label" style={{ color: 'var(--cyan)' }}>⚡ Optimize Plan</div>
+            <div className="label" style={{ color: 'var(--cyan)' }}>⚡ {window.t('mode_optimized').replace('.', '')}</div>
             <div className="big">{(opt.on_time_rate * 100).toFixed(0)}<span className="unit">%</span></div>
-            <div style={{ fontSize: 11, color: 'var(--text-2)', marginTop: 2 }}>Zamanında teslimat</div>
+            <div style={{ fontSize: 11, color: 'var(--text-2)', marginTop: 2 }}>{window.t('on_time_delivery')}</div>
             <div style={{ marginTop: 6, fontSize: 11, color: 'var(--text-3)', fontFamily: 'var(--font-mono)' }}>
-              Gecikme: {Number(opt.total_predicted_delay_min).toFixed(1)} dk · Ort/durak: {opt.avg_delay_per_stop_min}
+              {window.t('delay')}: {Number(opt.total_predicted_delay_min).toFixed(1)} {window.t('unit_min')}
             </div>
           </div>
         </div>
@@ -403,11 +406,11 @@ function DetailPane({ route, onApply, applied, onReOptimize }) {
           <span className="arrow">↗</span>
           <div style={{ flex: 1 }}>
             <div style={{ fontSize: 12 }}>
-              <span className="metric">+{(imp.on_time_rate_delta * 100).toFixed(1)}%</span> zamanında oranı ·
-              <span className="metric" style={{ marginLeft: 6 }}>−{Number(imp.delay_reduction_min).toFixed(1)} dk</span> toplam gecikme
+              <span className="metric">+{(imp.on_time_rate_delta * 100).toFixed(1)}%</span> {window.t('on_time').toLowerCase()} ·
+              <span className="metric" style={{ marginLeft: 6 }}>−{Number(imp.delay_reduction_min).toFixed(1)} {window.t('unit_min')}</span>
             </div>
             <div style={{ fontSize: 11, color: 'var(--text-2)', marginTop: 2 }}>
-              Delay factor {Number(route.delay_factor).toFixed(3)}× · RF tahmini: {Number(route.rf_predicted_total_delay_min).toFixed(1)} dk
+              {window.t('delay_factor')} {Number(route.delay_factor).toFixed(3)}× · RF: {Number(route.rf_predicted_total_delay_min).toFixed(1)} {window.t('unit_min')}
             </div>
           </div>
         </div>
@@ -415,15 +418,15 @@ function DetailPane({ route, onApply, applied, onReOptimize }) {
 
       <div className="actions">
         {applied ? (
-          <button className="btn btn-ghost" disabled style={{ color: 'var(--lime)', borderColor: 'rgba(142,230,138,0.3)' }}>✓ Plan Uygulandı</button>
+          <button className="btn btn-ghost" disabled style={{ color: 'var(--lime)', borderColor: 'rgba(142,230,138,0.3)' }}>✓</button>
         ) : (
-          <button className="btn btn-primary" onClick={onApply}>Optimize Planı Uygula</button>
+          <button className="btn btn-primary" onClick={onApply}>{window.t('apply_optimized')}</button>
         )}
-        <button className="btn btn-ghost" onClick={onReOptimize}>Yeniden Hesapla</button>
+        <button className="btn btn-ghost" onClick={onReOptimize}>{window.t('reoptimize')}</button>
       </div>
 
       <div style={{ display: 'flex', gap: 2, padding: '8px 16px 0', borderBottom: '1px solid var(--line)', background: 'var(--bg-1)' }}>
-        {[['timeline','Zaman'],['stops','Duraklar'],['model','AI Model']].map(([k, l]) => (
+        {[['timeline', window.t('tab_timeline')],['stops', window.t('tab_stops')],['model', window.t('tab_model')]].map(([k, l]) => (
           <button key={k} onClick={() => setTab(k)} style={{
             padding: '6px 10px', fontSize: 12, fontWeight: 500,
             color: tab===k ? 'var(--text-0)' : 'var(--text-2)',
@@ -443,6 +446,7 @@ function DetailPane({ route, onApply, applied, onReOptimize }) {
 }
 
 function AlertsStrip({ routes, onSelect }) {
+  const [lang] = window.useLang();
   const alerts = useMemo(() => {
     const list = [];
     (routes || []).forEach(r => {
@@ -478,7 +482,7 @@ function AlertsStrip({ routes, onSelect }) {
   return (
     <>
       <div className="pane-header">
-        <h3>Uyarı Merkezi<span className="count">{alerts.length} aktif</span></h3>
+        <h3>{window.t('alert_center')}<span className="count">{alerts.length} {window.t('alerts_active')}</span></h3>
       </div>
       <div style={{ maxHeight: 280, overflowY: 'auto' }}>
         {alerts.map((a, i) => (
@@ -493,7 +497,7 @@ function AlertsStrip({ routes, onSelect }) {
           </div>
         ))}
         {alerts.length === 0 && (
-          <div style={{ padding: '16px 14px', color: 'var(--text-3)', fontSize: 12 }}>Aktif uyarı yok.</div>
+          <div style={{ padding: '16px 14px', color: 'var(--text-3)', fontSize: 12 }}>{window.t('no_alerts')}</div>
         )}
       </div>
     </>
@@ -566,50 +570,75 @@ function Clock() {
   return <div className="clock">{hh}:{mm}:{ss}<span className="tz">UTC+3 SİVAS</span></div>;
 }
 
+function LangToggle() {
+  const [lang, setLang] = window.useLang();
+  const opts = [['tr','TR'],['en','EN'],['ru','RU']];
+  return (
+    <div className="lang-toggle" title={window.t('language')}>
+      {opts.map(([k, l]) => (
+        <button
+          key={k}
+          className={'lang-btn' + (lang === k ? ' active' : '')}
+          onClick={() => setLang(k)}
+        >{l}</button>
+      ))}
+    </div>
+  );
+}
+
 function TopBar({ activeNav, setActiveNav, criticalCount, onOpenTweaks, optimizing, weather }) {
+  const [lang] = window.useLang();
   const weatherMeta = {
-    snow:  { icon: '❄', label: 'KAR AKTİF',   cls: 'chip weather-snow'  },
-    rain:  { icon: '🌧', label: 'YAĞMUR',       cls: 'chip weather-rain'  },
-    fog:   { icon: '🌫', label: 'SİS AKTİF',    cls: 'chip weather-fog'   },
-    wind:  { icon: '💨', label: 'FIRTINA',       cls: 'chip weather-wind'  },
-    clear: { icon: '☀',  label: 'AÇIK HAVA',    cls: 'chip weather-clear' },
+    snow:  { icon: '❄', labelKey: 'w_snow',  cls: 'chip weather-snow'  },
+    rain:  { icon: '🌧', labelKey: 'w_rain',  cls: 'chip weather-rain'  },
+    fog:   { icon: '🌫', labelKey: 'w_fog',   cls: 'chip weather-fog'   },
+    wind:  { icon: '💨', labelKey: 'w_wind',  cls: 'chip weather-wind'  },
+    clear: { icon: '☀',  labelKey: 'w_clear', cls: 'chip weather-clear' },
   };
   const wm = weatherMeta[weather] || weatherMeta.clear;
+  const navItems = [
+    ['overview', window.t('nav_overview')],
+    ['winter',   window.t('nav_winter')],
+    ['fleet',    window.t('nav_fleet')],
+    ['routes',   window.t('nav_routes')],
+    ['reports',  window.t('nav_reports')],
+  ];
   return (
     <div className="topbar">
       <div className="brand">
         <div className="mark"></div>
-        <span>LOJİSTİK KOMUTA</span>
-        <span className="sub">v3.1 · sivas bölge</span>
+        <span>{window.t('app_title')}</span>
+        <span className="sub">v3.1 · sivas</span>
       </div>
       <nav>
-        {[['overview','Genel Bakış'],['winter','Kış Operasyonları'],['fleet','Filo'],['routes','Rotalar'],['reports','Raporlar']].map(([k,l]) => (
+        {navItems.map(([k, l]) => (
           <button key={k} className={activeNav===k?'active':''} onClick={()=>setActiveNav(k)}>{l}</button>
         ))}
       </nav>
       <div className="spacer"></div>
-      {/* Active weather scenario — neon label */}
       <div className={wm.cls} style={{ fontWeight: 600, letterSpacing: '0.04em', marginRight: 4 }}>
         <span style={{ marginRight: 4 }}>{wm.icon}</span>
-        <span>{wm.label}</span>
+        <span>{window.t(wm.labelKey)}</span>
       </div>
       <div className="status-chips">
         {criticalCount > 0 && (
-          <div className="chip critical"><span className="dot"></span><span>{criticalCount} kritik uyarı</span></div>
+          <div className="chip critical"><span className="dot"></span><span>{criticalCount} {window.t('sev_critical').toLowerCase()}</span></div>
         )}
         {optimizing && (
-          <div className="chip info"><span className="dot"></span><span>optimize ediliyor…</span></div>
+          <div className="chip info"><span className="dot"></span><span>{window.t('f_optimizing').toLowerCase()}…</span></div>
         )}
-        <div className="chip info"><span className="dot"></span><span>AI motoru aktif</span></div>
-        <div className="chip"><span className="dot"></span><span>Bağlantı: güvenli</span></div>
+        <div className="chip info"><span className="dot"></span><span>{window.t('chip_ai_active')}</span></div>
+        <div className="chip"><span className="dot"></span><span>{window.t('chip_secure')}</span></div>
       </div>
+      <LangToggle />
       <Clock />
-      <button className="map-btn" onClick={onOpenTweaks} title="Tweaks" style={{ marginLeft: 8 }}>⚙</button>
+      <button className="map-btn" onClick={onOpenTweaks} title={window.t('tooltip_tweaks')} style={{ marginLeft: 8 }}>⚙</button>
     </div>
   );
 }
 
 function KpiStrip({ routes }) {
+  const [lang] = window.useLang();
   if (!routes || routes.length === 0) return <div className="kpi-strip"></div>;
   const total = routes.length;
   const avgOrig = routes.reduce((s, r) => s + ((r.original_metrics && r.original_metrics.on_time_rate) || 0), 0) / total;
@@ -619,46 +648,47 @@ function KpiStrip({ routes }) {
   return (
     <div className="kpi-strip">
       <div className="kpi">
-        <div className="k">Aktif Rota</div>
-        <div className="v">{total}<span className="unit"> / {totalStops} durak</span></div>
+        <div className="k">{window.t('kpi_active_routes')}</div>
+        <div className="v">{total}<span className="unit"> / {totalStops} {window.t('unit_stops')}</span></div>
         <div className="trend">{Sparkline({ data: [3,5,4,6,5,7,6], width: 60, height: 16 })}</div>
       </div>
       <div className="kpi">
-        <div className="k">Zamanında (Mevcut)</div>
+        <div className="k">{window.t('kpi_on_time_current')}</div>
         <div className="v">{(avgOrig * 100).toFixed(1)}<span className="unit">%</span></div>
-        <div className="trend down">↓ risk: yüksek</div>
+        <div className="trend down">↓</div>
       </div>
       <div className="kpi">
-        <div className="k">Zamanında (Optimize)</div>
+        <div className="k">{window.t('kpi_on_time_optimized')}</div>
         <div className="v" style={{ color: 'var(--cyan)' }}>{(avgOpt * 100).toFixed(1)}<span className="unit">%</span></div>
-        <div className="trend">↑ +{((avgOpt - avgOrig) * 100).toFixed(1)}pp potansiyel</div>
+        <div className="trend">↑ +{((avgOpt - avgOrig) * 100).toFixed(1)}pp</div>
       </div>
       <div className="kpi">
-        <div className="k">Toplam Gecikme Düşüşü</div>
-        <div className="v" style={{ color: 'var(--lime)' }}>−{totalDelayReduction.toFixed(0)}<span className="unit"> dk</span></div>
-        <div className="trend">≈ {(totalDelayReduction / 60).toFixed(1)} saat tasarruf</div>
+        <div className="k">{window.t('kpi_total_delay_reduction')}</div>
+        <div className="v" style={{ color: 'var(--lime)' }}>−{totalDelayReduction.toFixed(0)}<span className="unit"> {window.t('unit_min')}</span></div>
+        <div className="trend">≈ {(totalDelayReduction / 60).toFixed(1)} h</div>
       </div>
     </div>
   );
 }
 
 function Footer({ weather, routes }) {
+  const [lang] = window.useLang();
   const tempMap = { snow: -4, rain: 8, fog: 3, clear: 11 };
   const temp = tempMap[weather] ?? 0;
   const ts = window.LOGISTICS_DATA.MODEL_STATS;
   return (
     <div className="footer">
-      <div><span className="k">SİSTEM:</span><span className="v" style={{ color: 'var(--lime)' }}>OPTİMİZE EDİYOR</span></div>
+      <div><span className="k">{window.t('f_system')}:</span><span className="v" style={{ color: 'var(--lime)' }}>{window.t('f_optimizing')}</span></div>
       <div className="sep"></div>
-      <div><span className="k">HAVA:</span><span className="v">{temp}°C · {weather.toUpperCase()}</span></div>
+      <div><span className="k">{window.t('f_weather')}:</span><span className="v">{temp}°C · {weather.toUpperCase()}</span></div>
       <div className="sep"></div>
-      <div><span className="k">ROTA:</span><span className="v">{routes.length} aktif</span></div>
+      <div><span className="k">{window.t('f_route')}:</span><span className="v">{routes.length} {window.t('f_active')}</span></div>
       <div className="sep"></div>
-      <div><span className="k">GÜVENLİK:</span><span className="v">YÜKSEK</span></div>
+      <div><span className="k">{window.t('f_security')}:</span><span className="v">{window.t('f_high')}</span></div>
       <div className="right">
-        <div><span className="k">MODEL:</span><span className="v">RF · R² {ts.r2}</span></div>
+        <div><span className="k">{window.t('f_model')}:</span><span className="v">RF · R² {ts.r2}</span></div>
         <div className="sep"></div>
-        <div><span className="k">MAE:</span><span className="v">{ts.mae_min} dk</span></div>
+        <div><span className="k">{window.t('f_mae_short')}:</span><span className="v">{ts.mae_min} {window.t('unit_min')}</span></div>
       </div>
     </div>
   );

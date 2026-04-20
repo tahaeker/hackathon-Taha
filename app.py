@@ -10,7 +10,7 @@ from pydantic import BaseModel
 
 from pathlib import Path
 
-from data_loader import load_all, compute_circuity_factors, haversine
+from data_loader import load_all, compute_circuity_factors, compute_speed_table, haversine
 from predictor import DelayPredictor
 from optimizer import simulate_route, optimize_stop_order, compute_metrics
 
@@ -20,14 +20,42 @@ from optimizer import simulate_route, optimize_stop_order, compute_metrics
 state: dict = {}
 
 
+MODEL_PATH = Path(__file__).parent / "models" / "delay_predictor.pkl"
+
+
 @asynccontextmanager
 async def lifespan(app: FastAPI):
     routes, stops, traffic, weather, hist = load_all()
 
     predictor = DelayPredictor()
-    train_stats = predictor.train(routes, stops, traffic, weather)
+    if MODEL_PATH.exists():
+        try:
+            predictor.load(MODEL_PATH)
+            # Kayıtlı modelde metrikler yok — feature importance'tan özet üret
+            train_stats = {
+                "mae_min": None,
+                "r2": None,
+                "source": "loaded_from_disk",
+                "features_used": len(predictor._feature_cols),
+                "top_features": dict(
+                    sorted(
+                        zip(predictor._feature_cols, predictor.model.feature_importances_.round(4)),
+                        key=lambda x: -x[1],
+                    )[:6]
+                ),
+            }
+            print(f"Model diskten yüklendi: {MODEL_PATH.name}")
+        except Exception as exc:
+            print(f"Model yüklenemedi ({exc}) — sıfırdan eğitiliyor...")
+            train_stats = predictor.train(routes, stops, traffic, weather)
+            predictor.save(MODEL_PATH)
+    else:
+        train_stats = predictor.train(routes, stops, traffic, weather)
+        predictor.save(MODEL_PATH)
+        print(f"Model eğitildi ve kaydedildi: {MODEL_PATH.name}")
 
     circuity, circuity_counts = compute_circuity_factors(stops)
+    speed_table, speed_counts = compute_speed_table(routes, stops)
 
     state["routes"] = routes
     state["stops"] = stops
@@ -37,13 +65,16 @@ async def lifespan(app: FastAPI):
     state["predictor"] = predictor
     state["circuity"] = circuity          # flat CF dict — used by optimizer
     state["circuity_counts"] = circuity_counts  # sample counts — exposed in API
+    state["speed_table"] = speed_table    # (road,traffic,weather) → km/h
+    state["speed_counts"] = speed_counts
     state["train_stats"] = train_stats
 
     print("=" * 60)
     print("Akıllı Lojistik API — hazır")
-    print(f"  Model MAE : {train_stats['mae_min']} dakika")
-    print(f"  Model R²  : {train_stats['r2']}")
-    print(f"  Circuity  : {circuity}")
+    print(f"  Model MAE  : {train_stats.get('mae_min')} dakika")
+    print(f"  Model R²   : {train_stats.get('r2')}")
+    print(f"  Circuity   : {circuity}")
+    print(f"  Speed tbl. : {len(speed_table)} kombinasyon ({sum(speed_counts.values())} örnek)")
     print("=" * 60)
     yield
 
@@ -248,14 +279,14 @@ def optimize_route(route_id: str, req: OptimizeRequest):
 
     original_stops = simulate_route(
         stops_df, route_info, state["predictor"], state["hist"],
-        state["weather"], state["traffic"], state["circuity"],
+        state["weather"], state["traffic"], state["circuity"], state["speed_table"],
         initial_weather=weather, initial_traffic=traffic,
     )
     original_metrics = compute_metrics(original_stops)
 
     optimized_stops = optimize_stop_order(
         stops_df, route_info, state["predictor"], state["hist"],
-        state["weather"], state["traffic"], state["circuity"],
+        state["weather"], state["traffic"], state["circuity"], state["speed_table"],
         initial_weather=weather, initial_traffic=traffic,
     )
     optimized_metrics = compute_metrics(optimized_stops)
@@ -319,3 +350,31 @@ def get_circuity():
 def get_model_stats():
     """Return Random Forest training metrics and feature importances."""
     return state.get("train_stats", {})
+
+
+@app.get("/stats/speed", tags=["Meta"])
+def get_speed_table():
+    """
+    Veri-güdümlü Effective Speed Table:
+    (road_type, traffic_level, weather_condition) → medyan gerçek hız (km/h)
+
+    Optimizer A→C (veride olmayan) kenarları icat ederken bu tabloyu kullanır.
+    """
+    speed = state.get("speed_table", {})
+    counts = state.get("speed_counts", {})
+    rows = [
+        {
+            "road_type": rt,
+            "traffic_level": tl,
+            "weather_condition": wc,
+            "median_speed_kmh": round(v, 1),
+            "sample_count": counts.get((rt, tl, wc), 0),
+        }
+        for (rt, tl, wc), v in speed.items()
+    ]
+    rows.sort(key=lambda r: (-r["sample_count"], r["road_type"]))
+    return {
+        "total_combinations": len(rows),
+        "total_samples": sum(counts.values()),
+        "rows": rows,
+    }

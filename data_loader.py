@@ -107,6 +107,88 @@ def compute_circuity_factors(stops: pd.DataFrame) -> dict:
 
 
 # ---------------------------------------------------------------------------
+# Effective Speed Table — (road_type × traffic × weather) → gerçek hız (km/h)
+# ---------------------------------------------------------------------------
+#
+# Mantık: veri setinde ardışık durak çiftleri (A→B) için
+#   distance_from_prev_km ve actual_travel_min biliniyor.
+# Buradan "o yol türünde, o trafik ve hava koşulunda kurye gerçekte ne hızda
+# gidiyor?" sorusu empirik olarak cevaplanır.
+# Optimizer A→C kenarını icat ederken sabit BASE_SPEED yerine bu tabloyu
+# kullanır — "A urban, C urban, trafik yoğun, yağmur" için veri ne diyorsa.
+# ---------------------------------------------------------------------------
+
+def compute_speed_table(
+    routes: pd.DataFrame,
+    stops: pd.DataFrame,
+) -> tuple:
+    """
+    (road_type, traffic_level, weather_condition) → median effective speed (km/h)
+    Geri dönüş: (speed_table, count_table)
+
+    Aykırı değerler (5 km/h altı, 130 km/h üstü) filtrelenir.
+    Çok kısa segmentler (0.5 km altı) ölçüm gürültüsü içerdiği için çıkarılır.
+    """
+    rt_info = routes[["route_id", "traffic_level", "weather_condition"]]
+    merged = stops.merge(rt_info, on="route_id", how="left")
+
+    valid = (
+        (merged["actual_travel_min"] > 1.0)
+        & (merged["distance_from_prev_km"] > 0.5)
+    )
+    df = merged[valid].copy()
+    df["effective_speed_kmh"] = (
+        df["distance_from_prev_km"] / (df["actual_travel_min"] / 60.0)
+    )
+    # Fiziksel olarak imkansız değerleri ayıkla
+    df = df[(df["effective_speed_kmh"] >= 5.0) & (df["effective_speed_kmh"] <= 130.0)]
+
+    speed_table: dict = {}
+    count_table: dict = {}
+    for (rt, tl, wc), group in df.groupby(["road_type", "traffic_level", "weather_condition"]):
+        speed_table[(str(rt), str(tl), str(wc))] = float(group["effective_speed_kmh"].median())
+        count_table[(str(rt), str(tl), str(wc))] = int(len(group))
+
+    return speed_table, count_table
+
+
+# BASE_SPEED — fallback default'ları (tablo hiç örnek içermiyorsa)
+DEFAULT_BASE_SPEED = {"highway": 90.0, "urban": 45.0, "rural": 65.0, "mountain": 40.0}
+
+
+def lookup_effective_speed(
+    road_type: str,
+    traffic_level: str,
+    weather_condition: str,
+    speed_table: dict,
+) -> float:
+    """
+    Kademeli fallback:
+      1. Tam eşleşme (road × traffic × weather)
+      2. road × traffic (hava marjinalleştir)
+      3. road (hava + trafik marjinalleştir)
+      4. DEFAULT_BASE_SPEED[road_type]
+      5. 55 km/h (yol türü de bilinmiyorsa)
+    """
+    key = (road_type, traffic_level, weather_condition)
+    if key in speed_table:
+        return speed_table[key]
+
+    same_road_traffic = [
+        v for (rt, tl, _wc), v in speed_table.items()
+        if rt == road_type and tl == traffic_level
+    ]
+    if same_road_traffic:
+        return float(np.median(same_road_traffic))
+
+    same_road = [v for (rt, _tl, _wc), v in speed_table.items() if rt == road_type]
+    if same_road:
+        return float(np.median(same_road))
+
+    return DEFAULT_BASE_SPEED.get(road_type, 55.0)
+
+
+# ---------------------------------------------------------------------------
 # Dinamik coğrafi + zamansal lookup yardımcıları
 # ---------------------------------------------------------------------------
 

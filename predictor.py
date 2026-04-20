@@ -11,6 +11,8 @@ Stop seviyesi gecikme: historical_delay_stats tablosuna lookup.
 
 import pandas as pd
 import numpy as np
+import joblib
+from pathlib import Path
 from sklearn.ensemble import RandomForestRegressor
 from sklearn.model_selection import train_test_split
 from sklearn.metrics import mean_absolute_error, r2_score
@@ -95,6 +97,37 @@ class DelayPredictor:
             ),
             "features_used": len(available),
         }
+
+    def save(self, path: Path) -> None:
+        if not self.is_trained:
+            raise RuntimeError("Eğitilmemiş model kaydedilemez.")
+        path.parent.mkdir(parents=True, exist_ok=True)
+        joblib.dump(
+            {
+                "model": self.model,
+                "feature_cols": self._feature_cols,
+                "schema_version": 1,
+            },
+            path,
+        )
+
+    def load(self, path: Path) -> None:
+        bundle = joblib.load(path)
+        saved_cols = bundle["feature_cols"]
+
+        # Şema doğrulama — eski .pkl + yeni MODEL_FEATURE_COLS uyuşmazlığını yakala
+        current = [c for c in MODEL_FEATURE_COLS]
+        missing = set(current) - set(saved_cols)
+        extra = set(saved_cols) - set(current)
+        if missing or extra:
+            raise RuntimeError(
+                f"Model şeması uyuşmuyor — train.py'yi yeniden çalıştır. "
+                f"Eksik: {missing} | Fazla: {extra}"
+            )
+
+        self.model = bundle["model"]
+        self._feature_cols = saved_cols
+        self.is_trained = True
 
     def predict_route_delay(
         self,

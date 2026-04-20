@@ -1,0 +1,7 @@
+__pycache__/
+*.pyc
+.venv/
+.env
+
+# Eğitilmiş modeller — train.py ile yeniden üretilir
+models/
